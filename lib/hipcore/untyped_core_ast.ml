@@ -43,6 +43,7 @@ and ty =
   | Inter of ty * ty 
   | Neg of ty 
   | ArrowTy of ty * ty
+  | TAny
 
 
 and term =

@@ -18,8 +18,8 @@ let yellow = Pretty.yellow
 let string_of_constant = Pretty.string_of_constant
 let rec string_of_base_type t = 
   match t with 
-    | Top -> "\top"
-    | Bot -> "\bot"
+    | Top -> "top"
+    | Bot -> "bot"
     | AnyBty -> "Any"
     | UnitBty -> "()"
     | IntBty -> "int"
@@ -39,6 +39,7 @@ and string_of_ty t : string =
   | Inter (t1, t2) -> string_of_ty t1 ^ "/\\" ^ string_of_ty t2
   | Neg t -> "not(" ^ string_of_ty t ^ ")"
   | ArrowTy (t1, t2) -> string_of_ty t1 ^ "->" ^ string_of_ty t2
+  | TAny -> "_"
 
 let string_of_binder ((ident, typ) : binder) =
   Format.sprintf "(%s : %s)" ident (string_of_type typ)

@@ -80,8 +80,8 @@ let string_of_constant c : string =
 
 let rec string_of_base_type t = 
   match t with 
-    | Top -> "\top"
-    | Bot -> "\bot"
+    | Top -> "top"
+    | Bot -> "bot"
     | AnyBty -> "Any"
     | UnitBty -> "()"
     | IntBty -> "int"
@@ -100,6 +100,7 @@ and string_of_ty t : string =
   | Inter (t1, t2) -> string_of_ty t1 ^ "/\\" ^ string_of_ty t2
   | Neg t -> "not(" ^ string_of_ty t ^ ")"
   | ArrowTy (t1, t2) -> string_of_ty t1 ^ "->" ^ string_of_ty t2
+  | TAny -> "_"
 
 let rec string_of_term t : string =
   match t with

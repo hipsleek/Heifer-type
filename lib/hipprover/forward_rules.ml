@@ -15,6 +15,7 @@ open Heap
 module StringMap = Map.Make(String)
 
 exception Entailfail of string
+exception Nomatch
 
 (*
 open Normalize
@@ -658,11 +659,12 @@ let match_type_with_pattern term s pattern =
       let r = match_constructors b p_list s in 
       if (fst r) then (true, (snd r)) else (false,s)
       else (false,s)
-  |_ -> failwith "to be implemented"
+  |(Type TAny, PAny) -> (true,s)
+  |_ ->  (false,s)
 let choose_case_for_match s var cases = 
   let ty = (find_in_state var s) in
   let rec case_matching  cases_list = match cases_list with 
-            | [] -> failwith "to be implemnted for underscore"
+            | [] -> raise (Nomatch)
             | x :: xs -> let result = match_type_with_pattern ty s x.ccase_pat in 
                          if fst result then (x.ccase_expr, snd result) else case_matching xs in 
   case_matching cases  
@@ -767,9 +769,13 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
   (* match e with | eff case... | constr case... *)
   | CMatch (_, _, discriminant, _, cases) -> 
     (*currently assume match always working on var*)
+    (try
     let case_var = extract_case_var discriminant in 
     let (r1,r2) = choose_case_for_match state case_var cases in
     forward r2 r1.core_desc
+    with Nomatch -> 
+       NormalReturn (And (fst state,Colon ("res", {term_type = Any;term_desc = Type (BaseTy (Defty ("Abtr",[])))})), snd state) 
+      )
   | CLambda _ -> failwith "to be implemented CLambda"
   | _ -> failwith "not supported expressions"
   in 
@@ -785,7 +791,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
      (* print_endline (string_of_pi (fst post)); *)
 
     let normalised_state = (normal_pi (fst post) (fst post), snd post) in 
-    print_endline (string_of_staged_spec (Require (fst normalised_state, snd normalised_state)));
+    (* print_endline (string_of_staged_spec (Require (fst normalised_state, snd normalised_state))); *)
     let _check_post = entail_type normalised_state postcondition map_args in
     rs
 

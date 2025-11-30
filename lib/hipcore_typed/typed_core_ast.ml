@@ -49,6 +49,7 @@ and ty = Untyped_core_ast.ty =
   | Inter of ty * ty 
   | Neg of ty 
   | ArrowTy of ty * ty
+  | TAny
 
 and term_desc =
   | Const of const
@@ -244,6 +245,7 @@ and check_sub t1 t2 = match t2 with
   | Inter (s1,s2) -> check_sub t1 s1 && check_sub t1 s2
   | Neg s -> not (check_sub t1 s) 
   | ArrowTy _-> failwith "fun type to be implemented"
+  | TAny -> failwith "TAny type to be implemented"
 
 and is_subtype t1 t2 = match t1 with 
   | BaseTy t -> check_sub t t2 

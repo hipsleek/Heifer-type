@@ -11,10 +11,10 @@ let id3 x = id2 x
  (*@  req x:#str ; ens res : # str @*)
 
 let id4 y = 
-(*@ req y:#Int[int] ; ens res:#Str[str] @*)
+(*@ req y:#Int[int] ; ens res:#Int[int] $ req y:#Str[str] ; ens res:#Str[str] $ req y:#__ ; ens res:#top@*)
         match y with 
-        |Int x->Str ("not supported")
-        |_ -> Str ("not supported")
+        |Int x->Int (x+1) 
+        |Str x -> Str ("not supported")
   
 
  let id y = let x = y in x;;

@@ -142,6 +142,8 @@ rule token = parse
       { SHIFT }
   | "rs"
       { RESET }
+  | "__"
+      {TANY}
   | eof
       { EOF }
   | '"'

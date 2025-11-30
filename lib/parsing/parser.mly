@@ -24,6 +24,7 @@ open Hiptypes
 %token COLON
 %token NOT
 %token ASSUME
+%token TANY
 
 
 %token TRUE
@@ -180,6 +181,8 @@ ty:
       {Neg t}
   | t1 = ty ARR t2 = ty
       {ArrowTy (t1, t2)}
+  | TANY 
+      {TAny}
 ;
 
 term:
