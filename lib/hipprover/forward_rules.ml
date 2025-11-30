@@ -667,10 +667,45 @@ let choose_case_for_match s var cases =
                          if fst result then (x.ccase_expr, snd result) else case_matching xs in 
   case_matching cases  
 
-(* let normal_pi p = 
-    let new_pi = match fst p with 
-    | Colon (_, x) -> (match x.term_desc with | Type (BaseTy (Tvar x)) -> )
-    | _  *)
+let rec get_type_for_var var pi = 
+  (* print_endline (string_of_pi pi); *)
+ 
+  match pi with
+  | Colon (x,v) -> if var = x then ( Some v) else None 
+  | And (a,b) -> let r =  get_type_for_var var a in
+                if  (r = None) then get_type_for_var var b else r 
+  | _ -> None  
+
+let rec process_args (x:ty list) pi= 
+  match x with 
+  | [] -> []
+  | y::ys -> match y with 
+            |  BaseTy (Tvar v) -> let r = get_type_for_var v pi in (match r with |None -> y::process_args ys pi | Some t -> (get_type_from_terms t.term_desc)::process_args ys pi )
+            | BaseTy (Defty (g,b)) -> BaseTy (Defty (g,process_args b pi)) :: process_args ys pi 
+            | _ -> y::process_args ys pi 
+
+let rec normal_term term pi =
+  let helper term r = (match r with 
+                              |Some t -> t 
+                              |None -> term) in 
+  match term.term_desc with 
+  | Type (BaseTy (Tvar x)) -> let r = get_type_for_var x pi in helper term r 
+                              
+  | Type (BaseTy (Defty (i,a))) -> 
+                                                                                    let normal_list = List.fold_right (fun y acc -> (
+                                                                                    match y with | BaseTy (Tvar x) -> let r = get_type_for_var x pi in (match r with
+                                                                                                                                             | None -> acc@[y]
+                                                                                                                                             | Some t -> acc@[get_type_from_terms t.term_desc])
+                                                                                    | BaseTy (Defty (g,b)) -> acc@[BaseTy (Defty (g, process_args b pi))]
+                                                                                    | _ -> acc@[y]  )) a [] in 
+                                                                                    {term_type=term.term_type;term_desc = Type (BaseTy (Defty (i,normal_list)))}
+  | _ -> term
+
+let rec normal_pi p_ori p = 
+     match  p with 
+    | Colon (a, x) -> Colon (a, normal_term x (p_ori))
+    | And (a,b) -> And (normal_pi p_ori a, normal_pi p_ori b)
+    | _ -> p
 let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (staged_spec ) = 
    
   let _binders, (init_state,postcondition) = find_all_binders spec in
@@ -739,18 +774,22 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
   | _ -> failwith "not supported expressions"
   in 
   let rs = forward (remove_req init_state) meth.m_body.core_desc in 
-  print_endline (string_of_staged_spec (rs));
+  (* print_endline (string_of_staged_spec (rs)); *)
   let post = (make_post_state rs) in 
   let postcondition = (make_post postcondition) in
   let map_args =   (make_list_map (List.fold_right (fun x acc -> acc @ [fst x]) meth.m_params ["res"])) in
-  (* try *)
+  try
   let _check_post = entail_type post postcondition map_args in
   rs
-  (* with Entailfail _ -> (
+  with Entailfail _ -> (
+     (* print_endline (string_of_pi (fst post)); *)
 
-    let normalised_state = normal_pi post in 
+    let normalised_state = (normal_pi (fst post) (fst post), snd post) in 
+    print_endline (string_of_staged_spec (Require (fst normalised_state, snd normalised_state)));
+    let _check_post = entail_type normalised_state postcondition map_args in
+    rs
 
-  ) *)
+  )
 
 
 (* let unify_ty (f:staged_spec) (var:string) (target:string) = 

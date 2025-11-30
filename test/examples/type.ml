@@ -11,9 +11,9 @@ let id3 x = id2 x
  (*@  req x:#str ; ens res : # str @*)
 
 let id4 y = 
-(*@ req y:#Int[int] ; ens res:#Int[int] @*)
+(*@ req y:#Int[int] ; ens res:#Str[str] @*)
         match y with 
-        |Int x->Int (x+1) 
+        |Int x->Str ("not supported")
         |_ -> Str ("not supported")
   
 
