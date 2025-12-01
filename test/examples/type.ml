@@ -7,6 +7,14 @@ type any = |Int of int
 let id2 y =  y
  (*@  req y:#t' ; ens res : # t' @*)
 
+let plus x y = x + y 
+(*@  req x:#int /\ y:#int ; ens res : # int @*)
+
+let deref x = !x 
+(*@  req x:#Ref[t']  ; ens res : # t' @*)
+
+
+
 let id3 x = id2 x 
  (*@  req x:#str ; ens res : # str @*)
 
