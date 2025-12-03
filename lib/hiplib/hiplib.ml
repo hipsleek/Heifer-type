@@ -502,7 +502,7 @@ let run_file input_file =
   run_string file_kind content;
   close_in chan;
   if not !test_mode then begin
-    let loc = List.length lines in
+    let loc:int = List.length lines in
     let final_summary =
       "\n========== FINAL SUMMARY ==========\n"
       ^ "[   LoC   ] " ^ string_of_int loc ^ "\n"
