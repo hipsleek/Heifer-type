@@ -50,7 +50,21 @@ let inc_inplace x = x := string_of_ints (!x +1)
 let make_ref x = ref x
   (*@ req x:#a'; ens res -> # Ref[x] /\  x:#a' @*)
 
- (* let f t = 
+let deref2 x = !x 
+(*@  req x->#Ref[t']  ; ens  x->#Ref[t'] /\ res : # t' @*)
+
+let update m v = m := v
+(*@  req m->#Ref[t'] /\ v:#a' ; ens  m->#Ref[a']  @*)
+
+let swap x  y  = 
+(*@  req x->#Ref[a'] * y->#Ref[b'] ; ens x->#Ref[b'] * y->#Ref[a']   @*)
+              let v1 = !x in let v2 = !y in
+            
+              update x  v2  ;
+              update y  v1 
+
+
+(* let f t = 
     !t := 5
 let test q= 
   let x = ref 2 in 

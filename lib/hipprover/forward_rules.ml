@@ -589,7 +589,11 @@ let normalise_for_var x state =
   let new_state = (fst state, make_new kappa) in 
 
   (List.hd !tem, new_state)
+let change_var_name mappings state =
+   
+  let r = List.fold_right (fun (a1,a2) acc -> swap_var_name_in_state a2 a1 acc) mappings state in 
 
+   r
 
 let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
   let (req, ens) = find_pre_post right_ori in
@@ -641,6 +645,7 @@ let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping =
     in 
   let entail_result = check_remaining (snd remaining_frame) in 
   let final_residue = List.fold_right (fun x acc-> remove_from_residue_kappa acc (PointsTo (fst x,snd x))) !remove_list_3 !left in 
+  post := change_var_name mapping !post;
   if entail_result then (final_residue, !post) else failwith "entail fail in remaining"
 
 let rec arg_mapping l1 l2 = match (l1,l2) with 
@@ -870,7 +875,15 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
        NormalReturn (And (fst state,Colon ("res", {term_type = Any;term_desc = Type (BaseTy (Defty ("Abtr",[])))})), snd state) 
       )
   | CLambda _ -> failwith "to be implemented CLambda"
-  | _ -> failwith "not supported expressions"
+  | CSequence (expr1, expr2) -> 
+    let r = forward state expr1.core_desc in 
+   ( match r with
+    | Require (a,b) 
+    | NormalReturn (a,b) -> forward (a,b) expr2.core_desc 
+    |_ -> failwith "unsupported")
+
+    
+  |_ -> failwith "not supported expressions"
   in 
   let rs = 
     (
