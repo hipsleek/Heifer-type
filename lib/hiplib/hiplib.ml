@@ -261,10 +261,10 @@ let analyze_method (prog : core_program) (meth : meth_def) : core_program =
     ~result:true; 
     in
   (
-    match initial_spec with | Assume _ ->
+    match initial_spec with | Assume a ->
   (* List.iter (fun x-> process x) multi_spec; *)
   List.iter (fun x-> process x false) multi_spec;
-  let pred = Hipprover.Entail.derive_predicate_type meth.m_name meth.m_params initial_spec in 
+  let pred = Hipprover.Entail.derive_predicate_type meth.m_name meth.m_params a in 
   let cp_predicates = SMap.add meth.m_name pred prog.cp_predicates in
   let prog = {prog with cp_predicates} in
   prog

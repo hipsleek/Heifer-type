@@ -568,6 +568,7 @@ let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping =
 
   | (a,p) :: xs -> 
                    let type_term_l =  (find_in_state a !left) in 
+                   
                    try 
                    let type_term_r =  (find_in_state p !right) in 
                    
@@ -736,6 +737,11 @@ let check_fun_in_spec name state =
   true 
   with Stateerror _ -> false 
 
+let find_res_in_post post = 
+  match post with 
+  |NormalReturn (a,b) ->( try let _r = find_in_state "res" (a,b) in true with Stateerror _ ->  false )
+  | _ -> failwith "must be an ensure clause"
+
 let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (staged_spec ) = 
    
   let _binders, (init_state,postcondition) = find_all_binders spec in
@@ -753,6 +759,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
     forward new_state expr2.core_desc
 
   | CFunCall (name, args) when List.mem name primitive_functions ->
+     (* print_endline name; *)
       call_primitive_type name args state
   | CFunCall (name,args) when (check_fun_in_spec name state) -> 
     let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
@@ -764,7 +771,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
 
 
   | CFunCall (name, args) ->
-     (* print_endline name; *)
+    
      let spec_table = prog.cp_predicates in 
      let spec_details = SMap.find name spec_table in 
      let spec = spec_details.p_body in 
@@ -776,9 +783,15 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
      NormalReturn (And (fst residue,fst result), SepConj (snd residue,snd result))
                  
 
-  | CWrite (x, t) -> let r = find_in_state x  state in 
+  | CWrite (x, t) -> 
+                      
+                     let r = find_in_state x  state in 
+                     
                      if (fst r) = "h" then let r = swap_content_in_state x {term_desc = Type (BaseTy (Defty ("Ref",[map_ter_to_ty t])));term_type = t.term_type} state in 
-                     Require (fst r, snd r)
+                     let r =
+                     Require (fst r, snd r) in 
+                     (* print_endline (string_of_staged_spec r); *)
+                     r
                else 
                 (try
                   (if (is_subtype (BaseTy (Defty ("Ref",[(map_ter_to_ty t)])))  (get_type_from_terms (snd (snd r)).term_desc)
@@ -826,11 +839,14 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
       NormalReturn (And ((Colon ("res",  ({term_desc = Type (BaseTy (Defty ("Err",[]))); term_type=Bool}))), fst change_x_to_old_x), snd change_x_to_old_x)
     )
   in 
-  (* print_endline (string_of_staged_spec (rs)); *)
+  print_endline (string_of_staged_spec (rs));
   let post = (make_post_state rs) in 
+  let acc = match find_res_in_post postcondition with |true -> ["res"] |false -> [] in
   let postcondition = (make_post postcondition) in
-  let map_args =   (make_list_map (List.fold_right (fun x acc -> acc @ [fst x]) meth.m_params ["res"])) in
+ 
+  let map_args =   (make_list_map (List.fold_right (fun x acc -> acc @ [fst x]) meth.m_params acc)) in
   try
+    
   let _check_post = entail_type post postcondition map_args in
   rs
   with Entailfail _ -> (

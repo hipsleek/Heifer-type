@@ -42,9 +42,9 @@ let inc_if_int y =
  let id y = let x = y in x;;
   (*@  forall t. req y:#t';   ens res: # t'  $ req y:#str ; ens res:#str $ req y->#int; ens  y->#int /\res=y $ req y -> # List[(int \/ str)]; ens res = y /\ y -> # List[(int \/ str)] @*)
 
-let string_of_int x = failwith "to be implemented" 
+let string_of_ints x = failwith "to be implemented" 
  (*@ assume req x:#int; ens res : #str @*)
-let inc_inplace x = x := string_of_int (!x +1)
+let inc_inplace x = x := string_of_ints (!x +1)
  (*@ req x->#Ref[int]; ens x -> # Ref[str] @*)
  
  (* let f t = 
