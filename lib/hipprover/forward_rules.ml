@@ -554,6 +554,43 @@ let remove_from_residue_kappa (f:pi*kappa) (t:kappa) =
   (fst f, new_kappa)
 
 
+let remove_ty x = 
+  match x with 
+  |Type a -> a 
+  |_ -> failwith "not supported"
+let rec process_kappa_t t state removing = 
+  match t with 
+  |Type (BaseTy (Tvar x)) -> let r = find_in_state x state in 
+                             if (fst r = "h") then (removing := fst (snd r) :: !removing; process_kappa_t (snd (snd r)).term_desc state removing) else snd (snd r) 
+  |Type (BaseTy (Defty (x,l))) -> let norm_l =
+                                                    let f = fun k -> remove_ty (process_kappa_t (Type k) state removing).term_desc in
+                                                    (List.map f l)
+                                                  
+                                                   in {term_desc=Type (BaseTy (Defty (x,norm_l)));term_type = Unknown}
+  | x -> {term_desc = x; term_type = Unknown}
+
+let normalise_for_var x state = 
+  let removing = ref [] in
+  let tem = ref [] in
+  let rec helper x kappa = 
+    match kappa with 
+    | PointsTo (y, t) when y=x -> let r = process_kappa_t t.term_desc state removing in tem:=[r];PointsTo(y, r)
+    | EmptyHeap -> EmptyHeap 
+    | SepConj (a,b) -> SepConj (helper x a, helper x b)
+    | x -> x 
+  in
+  let kappa = helper x (snd state) in 
+  let rec make_new kappa = match kappa with 
+          |EmptyHeap -> EmptyHeap 
+          |PointsTo(x,_) when List.exists (fun y -> y=x) !removing -> EmptyHeap
+          |SepConj(a,b) -> SepConj (make_new a, make_new b)
+          |x -> x 
+          in 
+  let new_state = (fst state, make_new kappa) in 
+
+  (List.hd !tem, new_state)
+
+
 let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
   let (req, ens) = find_pre_post right_ori in
   let post = ref ens in
@@ -577,7 +614,13 @@ let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping =
                    | (("s",t1),("s",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
                    if res then res && check_local xs else false
                    |(("h",t1),("h",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
-                   if res then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res && check_local xs)) else false
+                   if res then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res && check_local xs)) else 
+                    
+                   let norm = normalise_for_var (fst  t1) !left in 
+
+                    left := snd norm;
+                   let res2 = check_subtyps (fst norm) (snd t2) right post in 
+                   if res2 then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res2 && check_local xs)) else false 
                    | _ -> failwith "to be implemented"
                    ) 
                   with Stateerror _ ->  (true && check_local xs) 
@@ -839,7 +882,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
       NormalReturn (And ((Colon ("res",  ({term_desc = Type (BaseTy (Defty ("Err",[]))); term_type=Bool}))), fst change_x_to_old_x), snd change_x_to_old_x)
     )
   in 
-  print_endline (string_of_staged_spec (rs));
+  (* print_endline (string_of_staged_spec (rs)); *)
   let post = (make_post_state rs) in 
   let acc = match find_res_in_post postcondition with |true -> ["res"] |false -> [] in
   let postcondition = (make_post postcondition) in
