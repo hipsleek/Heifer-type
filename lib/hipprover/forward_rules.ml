@@ -16,6 +16,7 @@ module StringMap = Map.Make(String)
 
 exception Entailfail of string
 exception Nomatch
+exception Err of (pi*kappa)
 
 (*
 open Normalize
@@ -494,6 +495,8 @@ let call_primitive_type fname actualArgs (st:pi*kappa) =
      NormalReturn (And (fst st, Colon ("res",  ({term_desc = Type (BaseTy (IntBty)); term_type=Int}))), snd st)
   | "=", [_x1; _x2] ->
       NormalReturn (And (fst st, Colon ("res",  ({term_desc = Type (BaseTy (BoolBty)); term_type=Bool}))), snd st)
+   | "failwith", [_] -> 
+    raise (Err st)
     (* not assign its comparison
      let assi_var = (return_var_name x1.term_desc) in
     let old_var = fresh_variable () in
@@ -527,6 +530,7 @@ let call_primitive_type fname actualArgs (st:pi*kappa) =
     NormalReturn (res_eq (binop SConcat x1 x2), EmptyHeap)
   | "string_of_int", [x1] ->
     NormalReturn (res_eq (term (TApp ("string_of_int", [x1])) TyString), EmptyHeap)
+ 
   | _ ->
     failwith (Format.asprintf "unknown primitive: %s, args: %s" fname (string_of_list string_of_term actualArgs))  
 
@@ -655,7 +659,7 @@ let match_type_with_pattern term s pattern =
                   else (true,(And (Atomic (EQ,{term_desc=Var (fst x);term_type=pattern.pattern_type},{term_desc=Var (fst (snd term));term_type=pattern.pattern_type}), fst s), snd s))
   |(Type (BaseTy (Defty (a,b))),PConstr (c,d)) -> 
     if (a=c) then  
-      let p_list = List.fold_right (fun x acc ->acc@[x.pattern_desc]) d [] in
+      let p_list = List.fold_right (fun x acc ->x.pattern_desc::acc) d [] in
       let r = match_constructors b p_list s in 
       if (fst r) then (true, (snd r)) else (false,s)
       else (false,s)
@@ -727,7 +731,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
   | CFunCall (name, args) when List.mem name primitive_functions ->
       call_primitive_type name args state
   | CFunCall (name, args) ->
-
+     (* print_endline name; *)
      let spec_table = prog.cp_predicates in 
      let spec_details = SMap.find name spec_table in 
      let spec = spec_details.p_body in 
@@ -779,7 +783,16 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
   | CLambda _ -> failwith "to be implemented CLambda"
   | _ -> failwith "not supported expressions"
   in 
-  let rs = forward (remove_req init_state) meth.m_body.core_desc in 
+  let rs = 
+    (
+    try
+    forward (remove_req init_state) meth.m_body.core_desc 
+    with Err (pi,kappa)-> 
+      let old_var = fresh_variable () in
+      let change_x_to_old_x = swap_var_name_in_state "res" old_var (pi,kappa) in
+      NormalReturn (And ((Colon ("res",  ({term_desc = Type (BaseTy (Defty ("Err",[]))); term_type=Bool}))), fst change_x_to_old_x), snd change_x_to_old_x)
+    )
+  in 
   (* print_endline (string_of_staged_spec (rs)); *)
   let post = (make_post_state rs) in 
   let postcondition = (make_post postcondition) in

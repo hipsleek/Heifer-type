@@ -4,6 +4,10 @@ type h = |A
 type any = |Int of int
            |Str of string
 
+type 'a lists = |Nil 
+                |Cons of 'a * 'a list        
+
+
 let id2 y =  y
  (*@  req y:#t' ; ens res : # t' @*)
 
@@ -12,6 +16,13 @@ let plus x y = x + y
 
 let deref x = !x 
 (*@  req x:#Ref[t']  ; ens res : # t' @*)
+
+let tail x = 
+  (*@  req x:#Cons[t',Lists[t']]  ; ens res : # Lists[t'] $  req x:#Nil[]  ; ens res : # Err[] @*)
+             match x with
+             | Cons (x,xs) -> xs 
+             | Nil -> failwith "not supported"        
+
 
 
 
