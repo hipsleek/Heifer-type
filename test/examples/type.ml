@@ -46,7 +46,10 @@ let string_of_ints x = failwith "assume"
  (*@ assume req x:#int; ens res : #str @*)
 let inc_inplace x = x := string_of_ints (!x +1)
  (*@ req x->#Ref[int]; ens x -> # Ref[str] @*)
- 
+
+let make_ref x = ref x
+  (*@ req x:#a'; ens res -> # Ref[x] /\  x:#a' @*)
+
  (* let f t = 
     !t := 5
 let test q= 

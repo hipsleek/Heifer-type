@@ -621,7 +621,7 @@ let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping =
                     left := snd norm;
                    let res2 = check_subtyps (fst norm) (snd t2) right post in 
                    if res2 then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res2 && check_local xs)) else false 
-                   | _ -> failwith "to be implemented"
+                   | _ -> failwith "to be implemented1"
                    ) 
                   with Stateerror _ ->  (true && check_local xs) 
                   in 
@@ -691,7 +691,7 @@ let rec match_constructors (ty_list:ty list) (p_list) s =
     | (_x::_xs,[]) -> failwith "uneven parameter"
     | ([],_y::_ys) 
       -> failwith "uneven parameter"
-    | _ -> failwith "to be implemented"
+    | _ -> failwith "to be implemented2"
 
                                          
 
