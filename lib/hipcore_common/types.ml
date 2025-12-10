@@ -10,6 +10,7 @@ type typ =
   (* dynamic type that can unify with anything else. this is an escape hatch for extensions that cannot be typed under the standard ocaml type system *)
   | Any
   | Unit
+  | Unknown
   | Int
   | Bool
   | TyString

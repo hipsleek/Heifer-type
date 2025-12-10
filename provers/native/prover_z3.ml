@@ -86,6 +86,7 @@ let rec z3_sort_of_typ ctx typ =
     | Int -> Z3.Arithmetic.Integer.mk_sort ctx
     | Bool -> Z3.Boolean.mk_sort ctx
     | TyString -> Z3.Seq.mk_string_sort ctx
+    | Unknown -> failwith "does not apply"
     (* | Arrow _ -> raise (Invalid_argument (Printf.sprintf "z3_sort_of_typ: type %s not supported" (string_of_type typ))) *)
   end
 
@@ -394,6 +395,7 @@ let ex_quantify_expr binders ctx e =
     | Lamb -> failwith "Lamb"
     | Arrow (_, _) -> failwith "Arrow"
     | TVar _ -> failwith "TVar"
+    | Unknown -> failwith "unknown"
 
   let core_lang_to_expr : core_lang -> Expr.expr = fun e ->
     (* Format.printf "expr %s@." (Pretty.string_of_core_lang e); *)

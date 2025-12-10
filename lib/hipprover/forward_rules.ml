@@ -682,6 +682,23 @@ let rec get_type_for_var var pi =
                 if  (r = None) then get_type_for_var var b else r 
   | _ -> None  
 
+let rec spec_conversion_list arrow_type args = 
+    match arrow_type,args with
+    | (ArrowTy (a,b)), x::xs -> let r =  spec_conversion_list b xs in ((x,a)::fst r, snd r) 
+    | x,[] -> ([],("res",x))
+    | _,_ -> failwith "not Arrow type"
+
+let rec convert tlist = 
+  match tlist with 
+  | (a,b)::xs -> And (Colon (a,{term_desc = Type b;term_type = Unknown}), convert xs)
+  | [] -> True
+
+let spec_conversion func_type args = 
+  match func_type.term_desc with
+  | Type a -> let r = spec_conversion_list a args in let pre1,pre2 = (convert (fst r),EmptyHeap) in let post1,post2 = (Colon ("res",{term_desc = Type (snd (snd r));term_type = Unknown}),EmptyHeap) in 
+                  Sequence (Require (pre1,pre2), NormalReturn (post1,post2)) 
+  | _ -> failwith "not to be func type"
+
 let rec process_args (x:ty list) pi= 
   match x with 
   | [] -> []
@@ -712,6 +729,13 @@ let rec normal_pi p_ori p =
     | Colon (a, x) -> Colon (a, normal_term x (p_ori))
     | And (a,b) -> And (normal_pi p_ori a, normal_pi p_ori b)
     | _ -> p
+
+let check_fun_in_spec name state = 
+  try 
+  let _find = find_in_state name state in 
+  true 
+  with Stateerror _ -> false 
+
 let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (staged_spec ) = 
    
   let _binders, (init_state,postcondition) = find_all_binders spec in
@@ -730,6 +754,15 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
 
   | CFunCall (name, args) when List.mem name primitive_functions ->
       call_primitive_type name args state
+  | CFunCall (name,args) when (check_fun_in_spec name state) -> 
+    let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
+    let fun_type = snd (snd(find_in_state name state)) in 
+    let spec = spec_conversion fun_type args in 
+    let mappings = arg_mapping args args in
+    let (residue,result) = entail_type state  spec mappings in
+    NormalReturn (And (fst residue,fst result), SepConj (snd residue,snd result))
+
+
   | CFunCall (name, args) ->
      (* print_endline name; *)
      let spec_table = prog.cp_predicates in 

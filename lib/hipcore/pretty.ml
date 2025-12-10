@@ -412,6 +412,7 @@ let rec string_of_type t =
   | Lamb -> "lambda"
   | TVar v -> Format.asprintf "'%s" v
   | Arrow (t1, t2) -> Format.asprintf "%s->%s" (string_of_type t1) (string_of_type t2)
+  | Unknown -> "unknown"
 
 let string_of_type_declaration tdecl =
   let open Types in

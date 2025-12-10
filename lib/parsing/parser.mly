@@ -179,7 +179,7 @@ ty:
       {Inter (t1, t2)} 
   | NOT LPAREN t=ty RPAREN
       {Neg t}
-  | t1 = ty ARR t2 = ty
+  | t1 = ty MINUSGREATER t2 = ty
       {ArrowTy (t1, t2)}
   | TANY 
       {TAny}

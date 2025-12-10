@@ -183,6 +183,7 @@ and staged_spec =
 and typ = Types.typ = 
   | Any
   | Unit
+  | Unknown
   | Int
   | Bool
   | TyString
