@@ -22,12 +22,7 @@ val swap_content_in_state : ty_var -> term -> pi * kappa -> pi * kappa
 
 val unify_var_name_in_state: name -> term -> pi * kappa -> pi * kappa
 
-val is_subtype: ?state2:pi * kappa ->
-?mapping:(ty_var * ty_var) list ->
-ty ->
-?state1:pi * kappa ->
-ty ->
-bool
+val is_subtype: ty -> ty -> bool
 
 val check_equality: ty_var ->
 pi * 'a ->

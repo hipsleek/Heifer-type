@@ -227,9 +227,13 @@ let check_equality a left b right mapping =
     helper combine
 
 
-let rec  check_two_base_types ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap)) t1 t2= 
+let rec  check_two_base_types 
+  (* ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap))  *)
+  t1 t2= 
     if t1 = t2 then true else match (t1,t2) with 
-    | (Tvar x, Tvar y) when check_equality x state1 y state2 mapping -> true
+    (* | (Tvar x, Tvar y) when check_equality x  *)
+    (* state1 y state2 mapping  *)
+    (* -> true *)
     | (Consta ((Num _)), IntBty) 
     | ((Consta TTrue),BoolBty)
     | ((Consta TFalse),BoolBty)
@@ -242,24 +246,45 @@ let rec  check_two_base_types ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(sta
     | (Defty ("Cons",a::[BaseTy (Defty ("Nil",[]))]),Defty ("List",[b])) -> if  is_subtype a b then true else false  
     | (Defty ("Cons",[x1;x2]),(Defty ("List",[a]))) ->  (is_subtype x1 a) && is_subtype x2 (BaseTy (Defty ("List",[a])))
     | (a,Tyvar t) -> raise (Unification (a,t)) 
-    | (Defty (n1,l1),Defty (n2,l2)) -> if not (n1 = n2) then false else List.equal (is_subtype ~state2:state2 ~state1:state1 ~mapping:mapping) l1 l2 
+    | (Defty (n1,l1),Defty (n2,l2)) -> if not (n1 = n2) then false else List.equal is_subtype 
+    (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
+    l1 l2 
     | (Top,_) -> false 
     | (_, AnyBty) -> true 
     | _ -> false
     
-and check_sub ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap)) t1 t2 = match t2 with
-  | BaseTy t -> check_two_base_types t1 t ~state2:state2 ~state1:state1 ~mapping:mapping
-  | Union (s1,s2) -> check_sub t1 s1 ~state2:state2 ~state1:state1 ~mapping:mapping || check_sub t1 s2 ~state2:state2 ~state1:state1 ~mapping:mapping
-  | Inter (s1,s2) -> check_sub t1 s1 ~state2:state2 ~state1:state1 ~mapping:mapping && check_sub t1 s2 ~state2:state2 ~state1:state1 ~mapping:mapping
-  | Neg s -> not (check_sub t1 s ~state2:state2 ~state1:state1 ~mapping:mapping) 
+and check_sub 
+(* ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap))  *)
+      t1 t2 = match t2 with
+  | BaseTy t -> check_two_base_types t1 t 
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
+  | Union (s1,s2) -> check_sub t1 s1 
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
+                  || check_sub t1 s2 
+                  (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
+  | Inter (s1,s2) -> check_sub t1 s1 
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
+  && check_sub t1 s2 
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
+  | Neg s -> not (check_sub t1 s )
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping)  *)
   | ArrowTy _-> failwith "fun type to be implemented"
   | TAny -> failwith "TAny type to be implemented"
 
-and is_subtype  ?(state2 = (True,EmptyHeap)) ?(mapping = [])  t1 ?(state1 = (True,EmptyHeap)) t2 = match t1 with 
+and is_subtype  
+(* ?(state2 = (True,EmptyHeap)) ?(mapping = [])   ?(state1 = (True,EmptyHeap))  *)
+  t1 t2 = match t1 with 
   | BaseTy t -> check_sub t t2 
-  | Union (x1,x2) -> is_subtype x1 t2 ~state2:state2 ~state1:state1 ~mapping:mapping && is_subtype x2 t2 ~state2:state2 ~state1:state1 ~mapping:mapping 
-  | Inter (x1,x2) -> is_subtype x1 t2 ~state2:state2 ~state1:state1 ~mapping:mapping  || is_subtype x2 t2 ~state2:state2 ~state1:state1 ~mapping:mapping 
-  | Neg s -> not (is_subtype s t2 ~state2:state2 ~state1:state1 ~mapping:mapping ) (*not correct placeholder only*)
+  | Union (x1,x2) -> is_subtype x1 t2 
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
+  && is_subtype x2 t2 
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
+  | Inter (x1,x2) -> is_subtype x1 t2 
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping   *)
+  || is_subtype x2 t2 
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
+  | Neg s -> not (is_subtype s t2 )
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping ) not correct placeholder only *)
   | _ -> failwith "to be implemented"
 
   (*

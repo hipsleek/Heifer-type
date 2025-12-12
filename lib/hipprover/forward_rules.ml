@@ -625,11 +625,10 @@ let entail_type  ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_
                    (* print_endline (fst (snd type_term_l));
                    list_printer (fun x -> print_endline (fst x)) !remove_list_1; *)
                    let removed_r = List.exists (fun x -> x =  fst (snd type_term_r)) !remove_list_2 in
-                  
+                   let same_resurce = list_in (fst (snd type_term_l), fst (snd type_term_l)) mapping in
                    (* print_endline (fst (snd type_term_r));
                    list_printer (fun x -> print_endline (fst x)) !remove_list_2; *)
-                   if removed_l && removed_r then 
-                   check_equality a !left p !right mapping 
+                   if removed_l && removed_r then same_resurce
                    else if removed_l || removed_r then  false
                    else
                    (match (type_term_l,type_term_r) with 
