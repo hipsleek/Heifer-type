@@ -571,6 +571,25 @@ let rec process_kappa_t t state removing =
                                                    in {term_desc=Type (BaseTy (Defty (x,norm_l)));term_type = Unknown}
   | x -> {term_desc = x; term_type = Unknown}
 
+let rec list_combine2 y l = 
+  match l with
+  | [] -> []
+  | x::xs -> (y,x) :: list_combine2 y xs
+let rec list_combine l1 l2 = 
+    match l1 with 
+    | [] -> [] 
+    | x::xs -> list_combine2 x l2 @ list_combine xs l2
+
+let check_equality a left b right mapping = 
+    let equal_a = check_alising [a] [] (fst left) in 
+    let equal_b = check_alising [b] [] (fst right) in 
+    let combine = list_combine equal_a equal_b in
+    let rec helper alist = 
+    match alist with 
+    | [] -> false 
+    | x::xs -> List.exists (fun z -> x = z ) mapping || helper xs in 
+    helper combine
+
 let normalise_for_var x state = 
   let removing = ref [] in
   let tem = ref [] in
@@ -611,22 +630,23 @@ let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping =
 
   | (a,p) :: xs -> 
                    let type_term_l =  (find_in_state a !left) in 
-                   
                    try 
                    let type_term_r =  (find_in_state p !right) in 
-                   
-
+                   let removed_l = List.exists (fun x -> x = snd type_term_l) !remove_list_1 in 
+                   let removed_r = List.exists (fun x -> x = snd type_term_r) !remove_list_2 in
+                   if removed_l && removed_r then 
+                   check_equality a !left p !right mapping 
+                   else if removed_l || removed_r then false  
+                   else
                    (match (type_term_l,type_term_r) with 
-                   | (("s",t1),("s",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
-                   if res then res && check_local xs else false
+                   |(("s",t1),("s",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
+                                                      if res then res && check_local xs else false
                    |(("h",t1),("h",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
-                   if res then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res && check_local xs)) else 
-                    
-                   let norm = normalise_for_var (fst  t1) !left in 
-
-                    left := snd norm;
-                   let res2 = check_subtyps (fst norm) (snd t2) right post in 
-                   if res2 then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res2 && check_local xs)) else false 
+                                           if res then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res && check_local xs)) else 
+                                           let norm = normalise_for_var (fst  t1) !left in 
+                                           left := snd norm;
+                                           let res2 = check_subtyps (fst norm) (snd t2) right post in 
+                                           if res2 then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res2 && check_local xs)) else false 
                    | _ -> failwith "to be implemented1"
                    ) 
                   with Stateerror _ ->  (true && check_local xs) 

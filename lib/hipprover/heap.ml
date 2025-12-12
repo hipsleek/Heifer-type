@@ -75,7 +75,7 @@ let rec find_alising v (h:pi) =
        (find_alising v a) @ (find_alising v b)
   | _ -> []
 let rec check_alising (v:string list) (r:string list) (s:pi)  = 
-  (*give v, find all x that x=>v relation in pi*)
+  (*give v, find all x that x=>v (transitive) relation in pi*)
   match v with 
   | [] -> r 
   | x::xs -> let alised = find_alising x s in 
