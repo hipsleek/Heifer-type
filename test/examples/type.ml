@@ -56,22 +56,6 @@ let deref2 x = !x
 let update m v = m := v
 (*@  req m->#Ref[t'] /\ v:#a' ; ens  m->#Ref[a']  @*)
 
-let swap x  y  = 
-(*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y   @*)
-              let v1 = !x in let v2 = !y in
-            
-              update x  v2  ;
-              update y  v1 
-
-let rec map f xs = 
-  (*@  req f:#Any /\ xs:#Nil ; ens res:#Nil   @*)
-              match xs with 
-              | Nil -> Nil 
-              | Cons (y, ys) -> Cons(f y, map f ys)
-
-let alise x y = swap x y 
-(*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y   @*)
-
 let swap2 x  y  = 
 (*@  req x->#Ref[a'] * y-> #Ref[b'] ; ens x->#Ref[b'] * y->#Ref[a']   @*)
               let v1 = !x in let v2 = !y in
@@ -81,6 +65,25 @@ let swap2 x  y  =
 
 let alise2 x y = swap2 x y 
 (*@  req x->#Ref[a'] * y-> #Ref[b'] ; ens y->#Ref[a'] * x-> #Ref[b']   @*)
+
+let rec map f xs = 
+  (*@  req f:#Any /\ xs:#Nil ; ens res:#Nil   @*)
+              match xs with 
+              | Nil -> Nil 
+              | Cons (y, ys) -> Cons(f y, map f ys)
+
+let swap x  y  = 
+(*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y $  
+     req x->#Ref[a'] * y-> #Ref[b'] ; ens x->#Ref[b'] * y->#Ref[a']  @*)
+              let v1 = !x in let v2 = !y in
+            
+              update x  v2  ;
+              update y  v1 
+
+let alise x y = swap x y 
+(*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y  $ 
+     req x->#Ref[a'] * y-> #Ref[b'] ; ens y->#Ref[a'] * x-> #Ref[b'] @*)
+
 
 (* let f t = 
     !t := 5

@@ -668,7 +668,7 @@ let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping =
   let entail_result = check_remaining (snd remaining_frame) in 
   let final_residue = List.fold_right (fun x acc-> remove_from_residue_kappa acc (PointsTo (fst x,snd x))) !remove_list_3 !left in 
   post := change_var_name mapping !post;
-  if entail_result then (final_residue, !post) else failwith "entail fail in remaining"
+  if entail_result then (final_residue, !post) else raise (Entailfail "fail in remaining")
 
 let rec arg_mapping l1 l2 = match (l1,l2) with 
             |(x::xs,y::ys) -> (x,y)::(arg_mapping xs ys)
@@ -807,11 +807,18 @@ let check_fun_in_spec name state =
   let _find = find_in_state name state in 
   true 
   with Stateerror _ -> false 
-
+let rec spec_list spec = match spec with 
+      | Multi (s1,s2) -> spec_list s1 @ spec_list s2 
+      | _ -> [spec] 
 let find_arg_in_post post v= 
   match post with 
   |NormalReturn (a,b) ->( try let _r = find_in_state v (a,b) in true with Stateerror _ ->  false )
   | _ -> failwith "must be an ensure clause"
+
+let rec merge_post plist = match plist with 
+                      |[]->failwith "entail fail" 
+                      |Some a::_-> a 
+                      |_::xs -> merge_post xs  
 
 let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (staged_spec ) = 
    
@@ -844,14 +851,20 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
 
   | CFunCall (name, args) ->
     
+    
      let spec_table = prog.cp_predicates in 
      let spec_details = SMap.find name spec_table in 
-     let spec = spec_details.p_body in 
      let parameters =  spec_details.p_params in
      let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
      let parameters = List.fold_right (fun x acc -> acc @ [fst x]) parameters [] in
      let mappings = arg_mapping args parameters in 
-     let (residue,result) = entail_type state  spec mappings in
+     let spec = spec_details.p_body in 
+     let spec_list = spec_list spec in
+     let rec get_post_list spec_l = match spec_l with 
+                                | [] -> []
+                                | x::xs -> let r = (try (Some (entail_type state x mappings))  with Entailfail _ -> None) in r::get_post_list xs
+      in
+     let (residue,result) = merge_post (get_post_list spec_list) in
      NormalReturn (And (fst residue,fst result), SepConj (snd residue,snd result))
                  
 
