@@ -9,7 +9,7 @@ type 'a lists = |Nil
 
 
 let id2 y =  y
- (*@  req y:#t' ; ens res : # t' @*)
+ (*@  req y:#t' ; ens res : # t'  @*)
 
 let plus x y = x + y 
 (*@  req x:#int /\ y:#int ; ens res : # int @*)
@@ -18,7 +18,7 @@ let apply f x = f x
 (*@  req f:#a'-> b' /\ x:#a' ; ens res : # b' @*)
 
 let deref x = !x 
-(*@  req x:#Ref[t']  ; ens res : # t' @*)
+(*@  req x:#Ref[t']  ; ens res : # t' $ req x->#Ref[t']  ; ens  x->#Ref[t'] /\ res : # t' @*)
 
 let tail x = 
   (*@  req x:#Cons[t',Lists[t']]  ; ens res : # Lists[t'] $  req x:#Nil[]  ; ens res : # Err[] @*)
@@ -50,8 +50,8 @@ let inc_inplace x = x := string_of_ints (!x +1)
 let make_ref x = ref x
   (*@ req x:#a'; ens res -> # Ref[x] /\  x:#a' @*)
 
-let deref2 x = !x 
-(*@  req x->#Ref[t']  ; ens  x->#Ref[t'] /\ res : # t' @*)
+
+
 
 let update m v = m := v
 (*@  req m->#Ref[t'] /\ v:#a' ; ens  m->#Ref[a']  @*)
@@ -86,6 +86,11 @@ let alise x y = swap x y
 
 let list_seg x = x
 (*@  req x->#Cons[int, y] * y -> #Cons[int,Nil] ; ens x->#Cons[int, Cons[int,Nil]] /\ res=x @*)
+
+let make_alise x  y  = 
+(*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y $ req x->#Ref[a'] * y->#Ref[b'] ; ens y->#Ref[a'] /\ x=y @*)
+               x := y
+
 (* let f t = 
     !t := 5
 let test q= 

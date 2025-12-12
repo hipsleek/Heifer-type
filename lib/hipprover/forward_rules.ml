@@ -536,13 +536,13 @@ let call_primitive_type fname actualArgs (st:pi*kappa) =
   | _ ->
     failwith (Format.asprintf "unknown primitive: %s, args: %s" fname (string_of_list string_of_term actualArgs))  
 
-let check_subtyps t_l t_r right post= 
+let check_subtyps t_l t_r right post need_unification= 
      let t1 = get_type_from_terms t_l.term_desc in 
      let t2 = get_type_from_terms t_r.term_desc in 
     let r = 
                    try 
                    is_subtype t1 t2 
-                   with Unification (_a,b) -> ( right := unify_var_name_in_state b t_l !right; post := unify_var_name_in_state b t_l !post; true)
+                   with Unification (_a,b) -> (if need_unification then (right := unify_var_name_in_state b t_l !right; post := unify_var_name_in_state b t_l !post; true) else false)
                    in 
                    r
 let remove_from_residue_kappa (f:pi*kappa) (t) = 
@@ -616,7 +616,7 @@ let change_var_name mappings state =
 
    r
 
-let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
+let entail_type  ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
   let (req, ens) = find_pre_post right_ori in
   let post = ref ens in
 
@@ -648,14 +648,14 @@ let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping =
                    else if removed_l || removed_r then  false
                    else
                    (match (type_term_l,type_term_r) with 
-                   |(("s",t1),("s",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
+                   |(("s",t1),("s",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post need_unification in
                                                       if res then res && check_local xs else false
-                   |(("h",t1),("h",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
+                   |(("h",t1),("h",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post need_unification in 
                                            if res then (remove_list_1 :=(fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; (res && check_local xs)) else 
                                            let norm = normalise_for_var (fst  t1) !left in 
                                            left := snd norm;
                                            
-                                           let res2 = check_subtyps (fst norm) (snd t2) right post in 
+                                           let res2 = check_subtyps (fst norm) (snd t2) right post need_unification in 
                                            
                                            if res2 then (remove_list_1 := (fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; 
                                            (res2 && check_local xs)) else false 
@@ -913,7 +913,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
                 NormalReturn (And (fst state, res_eq (snd ch_var)), snd state)
                 else NormalReturn (And (fst state,Colon ("res", (snd ch_var))), snd state)
                 ) 
-               else NormalReturn (And (fst state,Colon ("res", (snd (snd r)))), snd state) 
+               else NormalReturn (And (fst state,Colon ("res", snd (return_ref_value (snd (snd r))))), snd state) 
   (* effect start *)
   (* match e with | eff case... | constr case... *)
   | CMatch (_, _, discriminant, _, cases) -> 
@@ -956,7 +956,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
 
   try
     
-  let _check_post = entail_type post postcondition map_args in
+  let _check_post = entail_type post postcondition map_args ~need_unification:false in
   
   rs
   with Entailfail _ -> (
@@ -964,7 +964,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
 
     let normalised_state = (normal_pi (fst post) (fst post), snd post) in 
     (* print_endline (string_of_staged_spec (Require (fst normalised_state, snd normalised_state))); *)
-    let _check_post = entail_type normalised_state postcondition map_args in
+    let _check_post = entail_type normalised_state postcondition map_args ~need_unification:false in
     rs
 
   )
