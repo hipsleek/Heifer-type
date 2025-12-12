@@ -64,10 +64,10 @@ let swap x  y  =
               update y  v1 
 
 let rec map f xs = 
-  (*@  req xs:#Nil ; ens res:#Nil   @*)
+  (*@  req f:#Any /\ xs:#Nil ; ens res:#Nil   @*)
               match xs with 
               | Nil -> Nil 
-              | Cons (y, ys) -> Cons(y, map f ys)
+              | Cons (y, ys) -> Cons(f y, map f ys)
 
 
 (* let f t = 
