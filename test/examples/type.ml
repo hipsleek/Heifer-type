@@ -84,7 +84,8 @@ let alise x y = swap x y
 (*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y  $ 
      req x->#Ref[a'] * y-> #Ref[b'] ; ens y->#Ref[a'] * x-> #Ref[b'] @*)
 
-
+let list_seg x = x
+(*@  req x->#Cons[int, y] * y -> #Cons[int,Nil] ; ens x->#Cons[int, Cons[int,Nil]] /\ res=x @*)
 (* let f t = 
     !t := 5
 let test q= 

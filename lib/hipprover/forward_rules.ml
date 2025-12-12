@@ -545,10 +545,10 @@ let check_subtyps t_l t_r right post=
                    with Unification (_a,b) -> ( right := unify_var_name_in_state b t_l !right; post := unify_var_name_in_state b t_l !post; true)
                    in 
                    r
-let remove_from_residue_kappa (f:pi*kappa) (t:kappa) = 
+let remove_from_residue_kappa (f:pi*kappa) (t) = 
   let rec remove kappa =
   match (kappa,t) with
-  | (PointsTo (a,b),PointsTo (c,_d)) -> if (a=c)  then  EmptyHeap else PointsTo (a,b)
+  | (PointsTo (a,b),c) -> if (a=c)  then  EmptyHeap else PointsTo (a,b)
   | (SepConj (a,b),_) -> SepConj (remove a, remove b) 
   | _ -> kappa
   in
@@ -622,51 +622,65 @@ let entail_type (left_ori:pi*kappa) (right_ori:staged_spec) mapping =
 
   let left = ref left_ori in
   let right = ref req in
-  let remove_list_1 = ref [] in
-  let remove_list_2 = ref [] in
+  let remove_list_1 : ty_var list ref = ref [] in
+  let remove_list_2 : ty_var list ref= ref [] in
+ 
   let rec check_local maplist=
   match maplist with
   | [] -> (true)
 
   | (a,p) :: xs -> 
                    let type_term_l =  (find_in_state a !left) in 
+                   
                    try 
                    let type_term_r =  (find_in_state p !right) in 
-                   let removed_l = List.exists (fun x -> x = snd type_term_l) !remove_list_1 in 
-                   let removed_r = List.exists (fun x -> x = snd type_term_r) !remove_list_2 in
+                   
+                   let removed_l = List.exists (fun x -> x = fst (snd type_term_l)) !remove_list_1 in 
+                  
+                   (* print_endline (fst (snd type_term_l));
+                   list_printer (fun x -> print_endline (fst x)) !remove_list_1; *)
+                   let removed_r = List.exists (fun x -> x =  fst (snd type_term_r)) !remove_list_2 in
+                  
+                   (* print_endline (fst (snd type_term_r));
+                   list_printer (fun x -> print_endline (fst x)) !remove_list_2; *)
                    if removed_l && removed_r then 
                    check_equality a !left p !right mapping 
-                   else if removed_l || removed_r then false  
+                   else if removed_l || removed_r then  false
                    else
                    (match (type_term_l,type_term_r) with 
                    |(("s",t1),("s",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
                                                       if res then res && check_local xs else false
                    |(("h",t1),("h",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post in 
-                                           if res then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res && check_local xs)) else 
+                                           if res then (remove_list_1 :=(fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; (res && check_local xs)) else 
                                            let norm = normalise_for_var (fst  t1) !left in 
                                            left := snd norm;
+                                           
                                            let res2 = check_subtyps (fst norm) (snd t2) right post in 
-                                           if res2 then (remove_list_1 := t1::!remove_list_1;remove_list_2 := t2::!remove_list_2; (res2 && check_local xs)) else false 
+                                           
+                                           if res2 then (remove_list_1 := (fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; 
+                                           (res2 && check_local xs)) else false 
                    | _ -> failwith "to be implemented1"
                    ) 
                   with Stateerror _ ->  (true && check_local xs) 
                   in 
+  
   let process_one =check_local mapping in 
+  
   if not process_one then raise (Entailfail "entail fail in process one")
   else       
-  let residue = List.fold_right (fun x acc-> remove_from_residue_kappa acc (PointsTo (fst x,snd x))) !remove_list_1 !left in 
+  let residue = List.fold_right (fun x acc-> remove_from_residue_kappa acc x) !remove_list_1 !left in 
   left := residue; 
-  let remaining_frame = List.fold_right (fun x acc-> remove_from_residue_kappa acc (PointsTo (fst x,snd x))) !remove_list_2 !right in 
-  let remove_list_3 = ref [] in  
+  let remaining_frame = List.fold_right (fun x acc-> remove_from_residue_kappa acc x) !remove_list_2 !right in 
+  let remove_list_3: ty_var list ref = ref [] in  
   let rec check_remaining f = 
     match f with 
     |SepConj (a,b) -> check_remaining a && check_remaining b 
     | EmptyHeap -> true 
     | PointsTo (a,b) -> let r = find_in_state a !left in 
-                        if (fst r) = "s" then false else if (PointsTo (a,b) = PointsTo (fst (snd r), snd (snd r))) then (remove_list_3 := (snd r)::!remove_list_3;true) else false 
+                        if (fst r) = "s" then false else if (PointsTo (a,b) = PointsTo (fst (snd r), snd (snd r))) then (remove_list_3 := (fst (snd r))::!remove_list_3;true) else false 
     in 
   let entail_result = check_remaining (snd remaining_frame) in 
-  let final_residue = List.fold_right (fun x acc-> remove_from_residue_kappa acc (PointsTo (fst x,snd x))) !remove_list_3 !left in 
+  let final_residue = List.fold_right (fun x acc-> remove_from_residue_kappa acc x) !remove_list_3 !left in 
   post := change_var_name mapping !post;
   if entail_result then (final_residue, !post) else raise (Entailfail "fail in remaining")
 
@@ -939,6 +953,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
   let postcondition = (make_post postcondition) in
   
   let map_args =   (make_list_map (List.fold_right (fun x acc -> acc @ [fst x]) argument_in_post acc)) in
+
   try
     
   let _check_post = entail_type post postcondition map_args in
