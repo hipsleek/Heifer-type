@@ -130,7 +130,7 @@ module TEnv = struct
         if simplified = t
         then simplified
         else if SMap.mem s expanded
-        then raise (Cyclic_type (t, simplified))
+        then Unknown
         (* Add s to the do-not-expand list, to prevent a cyclic expansion of s. *)
         else inner ~expanded:(SMap.add s t expanded) simplified
       | TConstr (constr, args) -> 

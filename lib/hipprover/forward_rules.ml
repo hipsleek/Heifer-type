@@ -555,47 +555,32 @@ let remove_from_residue_kappa (f:pi*kappa) (t) =
   let new_kappa = remove (snd f) in 
   (fst f, new_kappa)
 
+let list_in x alist = 
+  List.exists (fun y -> y = x) alist
 
 let remove_ty x = 
   match x with 
   |Type a -> a 
   |_ -> failwith "not supported"
-let rec process_kappa_t t state removing = 
+let rec process_kappa_t t state removing resursion= 
   match t with 
-  |Type (BaseTy (Tvar x)) -> let r = find_in_state x state in 
-                             if (fst r = "h") then (removing := fst (snd r) :: !removing; process_kappa_t (snd (snd r)).term_desc state removing) else snd (snd r) 
+  |Type (BaseTy (Tvar x))  ->let r = find_in_state x state in if (list_in (fst (snd r)) (resursion::!removing)) then {term_desc = Type (BaseTy (Tvar x)); term_type = Unknown} else
+                             if (fst r = "h") then (removing := fst (snd r) :: !removing; process_kappa_t (snd (snd r)).term_desc state removing resursion) else snd (snd r) 
   |Type (BaseTy (Defty (x,l))) -> let norm_l =
-                                                    let f = fun k -> remove_ty (process_kappa_t (Type k) state removing).term_desc in
+                                                    let f = fun k -> remove_ty (process_kappa_t (Type k) state removing resursion).term_desc in
                                                     (List.map f l)
                                                   
                                                    in {term_desc=Type (BaseTy (Defty (x,norm_l)));term_type = Unknown}
   | x -> {term_desc = x; term_type = Unknown}
 
-let rec list_combine2 y l = 
-  match l with
-  | [] -> []
-  | x::xs -> (y,x) :: list_combine2 y xs
-let rec list_combine l1 l2 = 
-    match l1 with 
-    | [] -> [] 
-    | x::xs -> list_combine2 x l2 @ list_combine xs l2
 
-let check_equality a left b right mapping = 
-    let equal_a = check_alising [a] [] (fst left) in 
-    let equal_b = check_alising [b] [] (fst right) in 
-    let combine = list_combine equal_a equal_b in
-    let rec helper alist = 
-    match alist with 
-    | [] -> false 
-    | x::xs -> List.exists (fun z -> x = z ) mapping || helper xs in 
-    helper combine
 
 let normalise_for_var x state = 
   let removing = ref [] in
   let tem = ref [] in
   let rec helper x kappa = 
     match kappa with 
-    | PointsTo (y, t) when y=x -> let r = process_kappa_t t.term_desc state removing in tem:=[r];PointsTo(y, r)
+    | PointsTo (y, t) when y=x -> let r = process_kappa_t t.term_desc state removing x in tem:=[r];PointsTo(y, r)
     | EmptyHeap -> EmptyHeap 
     | SepConj (a,b) -> SepConj (helper x a, helper x b)
     | x -> x 
@@ -654,7 +639,7 @@ let entail_type  ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_
                                            if res then (remove_list_1 :=(fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; (res && check_local xs)) else 
                                            let norm = normalise_for_var (fst  t1) !left in 
                                            left := snd norm;
-                                           
+                                           (* print_endline (string_of_state !left);  *)
                                            let res2 = check_subtyps (fst norm) (snd t2) right post need_unification in 
                                            
                                            if res2 then (remove_list_1 := (fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; 

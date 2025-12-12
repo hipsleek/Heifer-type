@@ -206,6 +206,62 @@ let unify_var_name_in_state (ori:string) (replace:term) (s:pi*kappa) =
   in 
  (pi,kappa)
 
+exception Unification of (bty * string)
+let rec list_combine2 y l = 
+  match l with
+  | [] -> []
+  | x::xs -> (y,x) :: list_combine2 y xs
+let rec list_combine l1 l2 = 
+    match l1 with 
+    | [] -> [] 
+    | x::xs -> list_combine2 x l2 @ list_combine xs l2
+
+let check_equality a left b right mapping = 
+    let equal_a = check_alising [a] [] (fst left) in 
+    let equal_b = check_alising [b] [] (fst right) in 
+    let combine = list_combine equal_a equal_b in
+    let rec helper alist = 
+    match alist with 
+    | [] -> false 
+    | x::xs -> List.exists (fun z -> x = z ) mapping || helper xs in 
+    helper combine
+
+
+let rec  check_two_base_types ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap)) t1 t2= 
+    if t1 = t2 then true else match (t1,t2) with 
+    | (Tvar x, Tvar y) when check_equality x state1 y state2 mapping -> true
+    | (Consta ((Num _)), IntBty) 
+    | ((Consta TTrue),BoolBty)
+    | ((Consta TFalse),BoolBty)
+    | (Consta (TStr _), TyStringBty)
+    | (Bot,_)
+    | (_,Top)
+    | (Defty ("Nil",[]),Defty ("List",_))
+   
+       -> true
+    | (Defty ("Cons",a::[BaseTy (Defty ("Nil",[]))]),Defty ("List",[b])) -> if  is_subtype a b then true else false  
+    | (Defty ("Cons",[x1;x2]),(Defty ("List",[a]))) ->  (is_subtype x1 a) && is_subtype x2 (BaseTy (Defty ("List",[a])))
+    | (a,Tyvar t) -> raise (Unification (a,t)) 
+    | (Defty (n1,l1),Defty (n2,l2)) -> if not (n1 = n2) then false else List.equal (is_subtype ~state2:state2 ~state1:state1 ~mapping:mapping) l1 l2 
+    | (Top,_) -> false 
+    | (_, AnyBty) -> true 
+    | _ -> false
+    
+and check_sub ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap)) t1 t2 = match t2 with
+  | BaseTy t -> check_two_base_types t1 t ~state2:state2 ~state1:state1 ~mapping:mapping
+  | Union (s1,s2) -> check_sub t1 s1 ~state2:state2 ~state1:state1 ~mapping:mapping || check_sub t1 s2 ~state2:state2 ~state1:state1 ~mapping:mapping
+  | Inter (s1,s2) -> check_sub t1 s1 ~state2:state2 ~state1:state1 ~mapping:mapping && check_sub t1 s2 ~state2:state2 ~state1:state1 ~mapping:mapping
+  | Neg s -> not (check_sub t1 s ~state2:state2 ~state1:state1 ~mapping:mapping) 
+  | ArrowTy _-> failwith "fun type to be implemented"
+  | TAny -> failwith "TAny type to be implemented"
+
+and is_subtype  ?(state2 = (True,EmptyHeap)) ?(mapping = [])  t1 ?(state1 = (True,EmptyHeap)) t2 = match t1 with 
+  | BaseTy t -> check_sub t t2 
+  | Union (x1,x2) -> is_subtype x1 t2 ~state2:state2 ~state1:state1 ~mapping:mapping && is_subtype x2 t2 ~state2:state2 ~state1:state1 ~mapping:mapping 
+  | Inter (x1,x2) -> is_subtype x1 t2 ~state2:state2 ~state1:state1 ~mapping:mapping  || is_subtype x2 t2 ~state2:state2 ~state1:state1 ~mapping:mapping 
+  | Neg s -> not (is_subtype s t2 ~state2:state2 ~state1:state1 ~mapping:mapping ) (*not correct placeholder only*)
+  | _ -> failwith "to be implemented"
+
   (*
 let rec check :
   string ->
