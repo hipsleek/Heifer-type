@@ -5,7 +5,7 @@ type any = |Int of int
            |Str of string
 
 type 'a lists = |Nil 
-                |Cons of 'a * 'a list        
+                |Cons of 'a * 'a lists        
 
 
 let id2 y =  y
@@ -62,6 +62,12 @@ let swap x  y  =
             
               update x  v2  ;
               update y  v1 
+
+let rec map f xs = 
+  (*@  req xs:#Nil ; ens res:#Nil   @*)
+              match xs with 
+              | Nil -> Nil 
+              | Cons (y, ys) -> Cons(y, map f ys)
 
 
 (* let f t = 

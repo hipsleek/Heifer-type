@@ -446,11 +446,13 @@ let constant_to_singleton_type (v:Typed_core_ast.term) (s:(pi*kappa)) =
 let constant_to_singleton_type_re (v:Typed_core_ast.term) (s:(pi*kappa)) = 
   (* print_endline (string_of_term v) ; *)
     match v.term_desc with 
-    |Const c -> NormalReturn (And (fst s, Colon ("res", (constant_to_singleton_type ({term_desc = (Const c); term_type=v.term_type}) s))), snd s)
+    |Const c -> 
+      NormalReturn (And (fst s, Colon ("res", (constant_to_singleton_type ({term_desc = (Const c); term_type=v.term_type}) s))), snd s)
     |Var c -> let r = find_in_state c s in 
                if (fst r) = "h" then NormalReturn (And (fst s, res_eq (constant_to_singleton_type ({term_desc =(Var c); term_type= v.term_type}) s)), snd s) 
                else NormalReturn (And (fst s,Colon ("res", (snd (snd r)))), snd s) 
-    |Construct _ -> NormalReturn (And (fst s,Colon ("res", {term_desc = Typed_core_ast.Type (map_ter_to_ty v);term_type = v.term_type})), snd s) 
+    |Construct _ -> 
+      NormalReturn (And (fst s,Colon ("res", {term_desc = Typed_core_ast.Type (map_ter_to_ty v);term_type = v.term_type})), snd s) 
     | _ -> failwith "must be a constant" 
 
 let extract_return (s:staged_spec) = match s with 
@@ -716,6 +718,7 @@ let match_type_with_pattern term s pattern =
   |_ ->  (false,s)
 let choose_case_for_match s var cases = 
   let ty = (find_in_state var s) in
+  
   let rec case_matching  cases_list = match cases_list with 
             | [] -> raise (Nomatch)
             | x :: xs -> let result = match_type_with_pattern ty s x.ccase_pat in 
@@ -785,9 +788,9 @@ let check_fun_in_spec name state =
   true 
   with Stateerror _ -> false 
 
-let find_res_in_post post = 
+let find_arg_in_post post v= 
   match post with 
-  |NormalReturn (a,b) ->( try let _r = find_in_state "res" (a,b) in true with Stateerror _ ->  false )
+  |NormalReturn (a,b) ->( try let _r = find_in_state v (a,b) in true with Stateerror _ ->  false )
   | _ -> failwith "must be an ensure clause"
 
 let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (staged_spec ) = 
@@ -797,7 +800,8 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
   let rec forward state (body:core_lang_desc) : (staged_spec) = 
     (* let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in *)
     match body with
-  | CValue v ->constant_to_singleton_type_re v state
+  | CValue v ->
+    constant_to_singleton_type_re v state
   | CLet (x, expr1, expr2) -> 
     let res = forward state expr1.core_desc in
     let current_state = extract_return res in 
@@ -897,13 +901,15 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
   in 
   (* print_endline (string_of_staged_spec (rs)); *)
   let post = (make_post_state rs) in 
-  let acc = match find_res_in_post postcondition with |true -> ["res"] |false -> [] in
+  let acc = match find_arg_in_post postcondition "res" with |true -> ["res"] |false -> [] in
+  let argument_in_post = List.filter (fun x -> find_arg_in_post postcondition (fst x)) meth.m_params in
   let postcondition = (make_post postcondition) in
- 
-  let map_args =   (make_list_map (List.fold_right (fun x acc -> acc @ [fst x]) meth.m_params acc)) in
+  
+  let map_args =   (make_list_map (List.fold_right (fun x acc -> acc @ [fst x]) argument_in_post acc)) in
   try
     
   let _check_post = entail_type post postcondition map_args in
+  
   rs
   with Entailfail _ -> (
      (* print_endline (string_of_pi (fst post)); *)
