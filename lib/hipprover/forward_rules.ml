@@ -600,8 +600,18 @@ let change_var_name mappings state =
   let r = List.fold_right (fun (a1,a2) acc -> swap_var_name_in_state a2 a1 acc) mappings state in 
 
    r
+let make_full_term_with_type x = 
+  {term_desc=x;term_type=Unknown}
+let is_list_to_nil_cons t1 t2 right post need_unification =
+  match t1.term_desc,t2.term_desc with 
+  | (Type (BaseTy (Defty ("Nil",[]))),(Type (BaseTy (Defty ("List",[_]))))) ->  true
+  | (Type (BaseTy (Defty ("Cons",[x;(BaseTy (Defty ("List",[y])))]))) as i,(Type (BaseTy (Defty ("List",[z]))))) -> if (x=y) then 
+              let t1 = (Type (BaseTy (Defty ("Cons",[z;(BaseTy (Defty ("List",[z])))])))) in
+              check_subtyps (make_full_term_with_type t1) (make_full_term_with_type i) right post need_unification
+              else false
+  | _ -> false
 
-let entail_type  ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
+let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
   let (req, ens) = find_pre_post right_ori in
   let post = ref ens in
 
@@ -632,7 +642,11 @@ let entail_type  ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_
                    else if removed_l || removed_r then  false
                    else
                    (match (type_term_l,type_term_r) with 
-                   |(("s",t1),("s",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post need_unification in
+                   |(("s",t1),("s",t2)) -> let is_list_to_nil_cons = is_list_to_nil_cons (snd t2) (snd t1) right post need_unification in
+                                           if need_unification && (is_list_to_nil_cons) then 
+                                          ( (if not (List.exists (fun x -> x = fst t1) (fst !specilise)) then specilise := (fst t1::(fst !specilise),(snd !specilise)*2)); true)
+                                           else
+                                           let res = check_subtyps (snd t1) (snd t2) right post need_unification in
                                                       if res then res && check_local xs else false
                    |(("h",t1),("h",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post need_unification in 
                                            if res then (remove_list_1 :=(fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; (res && check_local xs)) else 
@@ -815,15 +829,20 @@ let find_arg_in_post post v=
 
 let rec merge_post plist = match plist with 
                       |[]->failwith "entail fail" 
-                      |Some a::_-> a 
-                      |_::xs -> merge_post xs  
+                      |a::_-> a 
+                      
+let rec remove_none alist = 
+              match alist with 
+              |[] -> []
+              | Some a ::xs -> a :: remove_none xs 
+              | None :: xs ->remove_none xs 
 
 let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (staged_spec ) = 
    
   let _binders, (init_state,postcondition) = find_all_binders spec in
     (* list_printer print_endline (List.fold_right (fun a r -> (fst a)::r) binders []); *)
   let rec forward state (body:core_lang_desc) : (staged_spec) = 
-    (* let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in *)
+    let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in
     match body with
   | CValue v ->
     constant_to_singleton_type_re v state
@@ -858,11 +877,15 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
      let mappings = arg_mapping args parameters in 
      let spec = spec_details.p_body in 
      let spec_list = spec_list spec in
+     let check_if_specs_compelete = ref ([],1) in 
      let rec get_post_list spec_l = match spec_l with 
                                 | [] -> []
-                                | x::xs -> let r = (try (Some (entail_type state x mappings))  with Entailfail _ -> None) in r::get_post_list xs
-      in
-     let (residue,result) = merge_post (get_post_list spec_list) in
+                                | x::xs -> let r = (try (Some (entail_type state x mappings ~specilise:check_if_specs_compelete))  with Entailfail _ -> None) in r::get_post_list xs
+     in
+     let post_list = get_post_list spec_list in
+     let post_list = remove_none post_list in
+     (if  (List.length post_list < snd !check_if_specs_compelete) then print_endline "specs are not compelete for func call");
+     let (residue,result) = merge_post (post_list) in
      NormalReturn (And (fst residue,fst result), SepConj (snd residue,snd result))
                  
 
@@ -930,7 +953,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
       NormalReturn (And ((Colon ("res",  ({term_desc = Type (BaseTy (Defty ("Err",[]))); term_type=Bool}))), fst change_x_to_old_x), snd change_x_to_old_x)
     )
   in 
-  (* print_endline (string_of_staged_spec (rs)); *)
+  print_endline (string_of_staged_spec (rs));
   let post = (make_post_state rs) in 
   let acc = match find_arg_in_post postcondition "res" with |true -> ["res"] |false -> [] in
   let argument_in_post = List.filter (fun x -> find_arg_in_post postcondition (fst x)) meth.m_params in
