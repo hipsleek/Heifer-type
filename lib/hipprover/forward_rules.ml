@@ -879,7 +879,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
     let (residue,result) = entail_type state  spec mappings in
     NormalReturn (And (fst residue,fst result), SepConj (snd residue,snd result))
 
-
+    (*s*)
   | CFunCall (name, args) ->
     
     
