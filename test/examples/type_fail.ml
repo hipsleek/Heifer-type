@@ -17,3 +17,5 @@ let swap x  y  =
             
               update x  v2  ;
               update y  v1 
+let update m v = m := v
+(*@  req m->#Ref[t'] /\ v:#a' ; ens  m->#Ref[a']  @*)

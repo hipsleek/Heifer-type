@@ -4,8 +4,8 @@ type h = |A
 type any = |Int of int
            |Str of string
 
-type 'a lists = |Nil 
-                |Cons of 'a * 'a lists        
+type 'a list = |Nil 
+                |Cons of 'a * 'a list       
 
 
 let id2 y =  y
@@ -21,7 +21,7 @@ let deref x = !x
 (*@  req x:#Ref[t']  ; ens res : # t' $ req x->#Ref[t']  ; ens  x->#Ref[t'] /\ res : # t' @*)
 
 let tail x = 
-  (*@  req x:#Cons[t',Lists[t']]  ; ens res : # Lists[t'] $  req x:#Nil[]  ; ens res : # Err[] @*)
+  (*@  req x:#Cons[t',List[t']]  ; ens res : # List[t'] $  req x:#Nil[]  ; ens res : # Err[] @*)
              match x with
              | Cons (x,xs) -> xs 
              | Nil -> failwith "not supported"        
@@ -98,7 +98,7 @@ $  req x->#Ref[a'] /\ x=y ; ens x->#Ref[y] /\ x=y  @*)
                x := y
 
 let check_spec_completeness x = tail x 
-(*@ req x:#List[a']  ; ens res : # List[a'] @*)
+(*@ req x:#List[a']  ; ens res : # (List[a'] \/ Err[])@*)
 (* let f t = 
     !t := 5
 let test q= 

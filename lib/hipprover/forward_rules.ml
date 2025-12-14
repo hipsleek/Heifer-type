@@ -539,12 +539,20 @@ let call_primitive_type fname actualArgs (st:pi*kappa) =
 let check_subtyps t_l t_r right post need_unification= 
      let t1 = get_type_from_terms t_l.term_desc in 
      let t2 = get_type_from_terms t_r.term_desc in 
-    let r = 
+     (* print_endline (string_of_ty t1); print_endline (string_of_ty t2); *)
+    
+
+     let r = 
                    try 
-                   is_subtype t1 t2 
-                   with Unification (_a,b) -> (if need_unification then (right := unify_var_name_in_state b t_l !right; post := unify_var_name_in_state b t_l !post; true) else false)
+                   is_subtype t1 t2 ~need_unification:(need_unification, (right,post))
+                   with Unification (_a,_b) -> (if need_unification then  true else false)
                    in 
                    r
+
+
+                   
+   
+                   
 let remove_from_residue_kappa (f:pi*kappa) (t) = 
   let rec remove kappa =
   match (kappa,t) with
@@ -605,7 +613,8 @@ let make_full_term_with_type x =
 let is_list_to_nil_cons t1 t2 right post need_unification =
   match t1.term_desc,t2.term_desc with 
   | (Type (BaseTy (Defty ("Nil",[]))),(Type (BaseTy (Defty ("List",[_]))))) ->  true
-  | (Type (BaseTy (Defty ("Cons",[x;(BaseTy (Defty ("List",[y])))]))) as i,(Type (BaseTy (Defty ("List",[z]))))) -> if (x=y) then 
+  | (Type (BaseTy (Defty ("Cons",[x;(BaseTy (Defty ("List",[y])))]))) as i,(Type (BaseTy (Defty ("List",[z]))))) -> 
+              if (x=y) then 
               let t1 = (Type (BaseTy (Defty ("Cons",[z;(BaseTy (Defty ("List",[z])))])))) in
               check_subtyps (make_full_term_with_type t1) (make_full_term_with_type i) right post need_unification
               else false
@@ -827,9 +836,14 @@ let find_arg_in_post post v=
   |NormalReturn (a,b) ->( try let _r = find_in_state v (a,b) in true with Stateerror _ ->  false )
   | _ -> failwith "must be an ensure clause"
 
-let rec merge_post plist = match plist with 
+
+let merge (r1,p1) (r2,p2) = 
+    if not (r1=r2) then failwith "residue not match cannot merge"
+    else r1, (merge_pure (fst p1) (fst p2), merge_heap (snd p1) (snd p2))
+
+let merge_post plist = match plist with 
                       |[]->failwith "entail fail" 
-                      |a::_-> a 
+                      |x::xs -> List.fold_right (fun x acc -> merge x acc) xs x
                       
 let rec remove_none alist = 
               match alist with 
@@ -842,7 +856,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
   let _binders, (init_state,postcondition) = find_all_binders spec in
     (* list_printer print_endline (List.fold_right (fun a r -> (fst a)::r) binders []); *)
   let rec forward state (body:core_lang_desc) : (staged_spec) = 
-    let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in
+    (* let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in *)
     match body with
   | CValue v ->
     constant_to_singleton_type_re v state
@@ -900,7 +914,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
                      r
                else 
                 (try
-                  (if (is_subtype (BaseTy (Defty ("Ref",[(map_ter_to_ty t)])))  (get_type_from_terms (snd (snd r)).term_desc)
+                  (if (is_subtype (BaseTy (Defty ("Ref",[(map_ter_to_ty t)])))  (get_type_from_terms (snd (snd r)).term_desc) 
                 ) then Require (fst state, snd state) else failwith "cannot change colon type"  )
                 with Unification (_,_) -> (
                   
@@ -953,7 +967,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
       NormalReturn (And ((Colon ("res",  ({term_desc = Type (BaseTy (Defty ("Err",[]))); term_type=Bool}))), fst change_x_to_old_x), snd change_x_to_old_x)
     )
   in 
-  print_endline (string_of_staged_spec (rs));
+  (* print_endline (string_of_staged_spec (rs)); *)
   let post = (make_post_state rs) in 
   let acc = match find_arg_in_post postcondition "res" with |true -> ["res"] |false -> [] in
   let argument_in_post = List.filter (fun x -> find_arg_in_post postcondition (fst x)) meth.m_params in

@@ -228,6 +228,7 @@ let check_equality a left b right mapping =
 
 
 let rec  check_two_base_types 
+  ?(need_unification = false , (ref (True,EmptyHeap), ref (True,EmptyHeap)) ) 
   (* ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap))  *)
   t1 t2= 
     if t1 = t2 then true else match (t1,t2) with 
@@ -243,50 +244,71 @@ let rec  check_two_base_types
     | (Defty ("Nil",[]),Defty ("List",_))
    
        -> true
-    | (Defty ("Cons",a::[BaseTy (Defty ("Nil",[]))]),Defty ("List",[b])) -> if  is_subtype a b then true else false  
-    | (Defty ("Cons",[x1;x2]),(Defty ("List",[a]))) ->  (is_subtype x1 a) && is_subtype x2 (BaseTy (Defty ("List",[a])))
-    | (a,Tyvar t) -> raise (Unification (a,t)) 
-    | (Defty (n1,l1),Defty (n2,l2)) -> if not (n1 = n2) then false else List.equal is_subtype 
+    | (Defty ("Cons",a::[BaseTy (Defty ("Nil",[]))]),Defty ("List",[b])) -> if  is_subtype ~need_unification:need_unification a b then true else false  
+    | (Defty ("Cons",[x1;x2]),(Defty ("List",[a]))) ->  (is_subtype ~need_unification:need_unification x1 a) && is_subtype ~need_unification:need_unification x2 (BaseTy (Defty ("List",[a])))
+    | (a,Tyvar t) -> if not (fst need_unification) then raise (Unification (a,t)) else 
+                      let right = fst (snd need_unification) in 
+                      let post = snd (snd need_unification) in
+                      let t_l = {term_desc=Type (BaseTy a); term_type = Unknown} in
+                      (right:= unify_var_name_in_state t t_l !right; post := unify_var_name_in_state t t_l !post; true)
+    | (Defty (n1,l1),Defty (n2,l2)) -> if not (n1 = n2) then false else List.equal (is_subtype ~need_unification:need_unification) 
     (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
-    l1 l2 
+    l1 l2 (*todo:check for unmatch type parameter eg cons(a',list(b')), cons(t',list(t'))*)
     | (Top,_) -> false 
     | (_, AnyBty) -> true 
     | _ -> false
     
 and check_sub 
+      ?(need_unification = false , (ref (True,EmptyHeap), ref (True,EmptyHeap)) ) 
 (* ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap))  *)
       t1 t2 = match t2 with
-  | BaseTy t -> check_two_base_types t1 t 
+  | BaseTy t -> check_two_base_types t1 t ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
-  | Union (s1,s2) -> check_sub t1 s1 
+  | Union (s1,s2) -> check_sub t1 s1 ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
-                  || check_sub t1 s2 
+                  || check_sub t1 s2 ~need_unification:need_unification
                   (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
-  | Inter (s1,s2) -> check_sub t1 s1 
+  | Inter (s1,s2) -> check_sub t1 s1 ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
-  && check_sub t1 s2 
+  && check_sub t1 s2 ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
-  | Neg s -> not (check_sub t1 s )
+  | Neg s -> not (check_sub t1 s ~need_unification:need_unification)
   (* ~state2:state2 ~state1:state1 ~mapping:mapping)  *)
   | ArrowTy _-> failwith "fun type to be implemented"
   | TAny -> failwith "TAny type to be implemented"
 
 and is_subtype  
-(* ?(state2 = (True,EmptyHeap)) ?(mapping = [])   ?(state1 = (True,EmptyHeap))  *)
+          ?(need_unification = false , (ref (True,EmptyHeap), ref (True,EmptyHeap)) ) 
   t1 t2 = match t1 with 
-  | BaseTy t -> check_sub t t2 
-  | Union (x1,x2) -> is_subtype x1 t2 
+  | BaseTy t -> check_sub t t2 ~need_unification:need_unification
+  | Union (x1,x2) -> is_subtype x1 t2 ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
-  && is_subtype x2 t2 
+  && is_subtype x2 t2 ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
-  | Inter (x1,x2) -> is_subtype x1 t2 
+  | Inter (x1,x2) -> is_subtype x1 t2 ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping   *)
-  || is_subtype x2 t2 
+  || is_subtype x2 t2 ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
-  | Neg s -> not (is_subtype s t2 )
+  | Neg s -> not (is_subtype s t2 ~need_unification:need_unification)
   (* ~state2:state2 ~state1:state1 ~mapping:mapping ) not correct placeholder only *)
   | _ -> failwith "to be implemented"
 
+
+let rec merge_heap h1 h2 = (*assume equal shape*)
+  match h1 with 
+  |PointsTo (x, t1) -> let t2 = snd  (List.hd (find_var_in_heap x h2)) in  
+                       let ty = Type (Union (get_type_from_terms (t1.term_desc),get_type_from_terms (t2.term_desc))) in 
+                       PointsTo (x, {term_desc=ty;term_type=Unknown})
+  | EmptyHeap -> EmptyHeap 
+  | SepConj (a,b) -> SepConj (merge_heap a h2, merge_heap b h2)
+
+let rec merge_pure s1 s2 = (*assume equal shape*)
+    match s1 with 
+    |Colon (x,t1) -> let t2 = snd  (List.hd (find_var_in_pure x s2)) in  
+                     let ty = Type (Union (get_type_from_terms (t1.term_desc),get_type_from_terms (t2.term_desc))) in 
+                     Colon (x,{term_desc=ty;term_type=Unknown})
+    | And (a,b) -> And (merge_pure a s2, merge_pure b s2) 
+    | x -> x
   (*
 let rec check :
   string ->

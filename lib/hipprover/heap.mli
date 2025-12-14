@@ -22,7 +22,11 @@ val swap_content_in_state : ty_var -> term -> pi * kappa -> pi * kappa
 
 val unify_var_name_in_state: name -> term -> pi * kappa -> pi * kappa
 
-val is_subtype: ty -> ty -> bool
+val is_subtype: ?need_unification:bool * ((pi * kappa) ref * (pi * kappa) ref) -> ty -> ty -> bool
+
+val merge_heap: kappa -> kappa -> kappa
+
+val merge_pure: pi -> pi -> pi
 
 val check_equality: ty_var ->
 pi * 'a ->
