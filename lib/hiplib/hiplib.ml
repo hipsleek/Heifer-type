@@ -218,7 +218,7 @@ let analyze_method (prog : core_program) (meth : meth_def) : core_program =
      if need_verify then 
         let open Hipprover.Forward_rules in
   (* print_endline (string_of_staged_spec sp); *)
-        (analyze_type_spec sp meth prog) else 
+        (analyze_type_spec sp meth prog multi_spec) else 
         sp
         in
   

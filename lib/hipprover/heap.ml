@@ -168,12 +168,19 @@ let rec unify_terms_in_heap (ori:string) (replace:ty) (s:kappa) =
   | SepConj (s1,s2) -> SepConj (unify_terms_in_heap ori replace s1, unify_terms_in_heap ori replace s2)
   | _ -> s
 
+let rec unify_for_arrow_type ori arr replace = 
+  match arr with 
+  | ArrowTy (a,b) -> ArrowTy (unify_for_arrow_type ori a replace, unify_for_arrow_type ori b replace) 
+  | (BaseTy (Tyvar a)) -> if a = ori then replace else (BaseTy (Tyvar a)) 
+  | (BaseTy (Defty (a,b)))  ->  let des =  (BaseTy (Defty (a, unify_terms_for_defty ori b replace))) in des
+  | _ -> arr
 let rec unify_var_name_in_pure (ori:string) (replace:ty) (s:pi) = 
   match s with
   | Colon (x,t) ->
      (match t.term_desc with 
      |Type (BaseTy (Tyvar a)) -> if a = ori then Colon (x, {term_type=t.term_type;term_desc= Type replace}) else s
      |Type (BaseTy (Defty (a,b)))  ->  let des = Type (BaseTy (Defty (a, unify_terms_for_defty ori b replace))) in Colon (x,{term_desc=des;term_type = t.term_type})
+     |Type (ArrowTy (a,b)) -> let des = Type ((unify_for_arrow_type ori (ArrowTy (a,b)) replace)) in Colon(x,{term_desc=des;term_type = t.term_type})
      | _ -> s
      )
   (* | Atomic (EQ, a, b) -> if (Typed_core_ast.return_var_name a.term_desc) = ori then Atomic (EQ, {term_desc=Var replace;term_type=a.term_type}, b) else if (Typed_core_ast.return_var_name b.term_desc) = ori then  Atomic (EQ, a, {term_desc=Var replace;term_type=b.term_type}) else s *)

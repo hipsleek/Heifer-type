@@ -621,6 +621,7 @@ let is_list_to_nil_cons t1 t2 right post need_unification =
   | _ -> false
 
 let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
+  
   let (req, ens) = find_pre_post right_ori in
   let post = ref ens in
 
@@ -635,7 +636,7 @@ let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*k
 
   | (a,p) :: xs -> 
                    let type_term_l =  (find_in_state a !left) in 
-                   
+                    (* (print_endline (a^(string_of_term  (snd (snd type_term_l))))); *)
                    try 
                    let type_term_r =  (find_in_state p !right) in 
                    
@@ -651,9 +652,12 @@ let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*k
                    else if removed_l || removed_r then  false
                    else
                    (match (type_term_l,type_term_r) with 
-                   |(("s",t1),("s",t2)) -> let is_list_to_nil_cons = is_list_to_nil_cons (snd t2) (snd t1) right post need_unification in
+                   |(("s",t1),("s",t2)) -> 
+                                          (* (print_endline ((string_of_term  (snd t1))^(string_of_term (snd t2)))); *)
+                                           let is_list_to_nil_cons = is_list_to_nil_cons (snd t2) (snd t1) right post need_unification in
+                                           (* (print_endline (string_of_state !right)); *)
                                            if need_unification && (is_list_to_nil_cons) then 
-                                          ( (if not (List.exists (fun x -> x = fst t1) (fst !specilise)) then specilise := (fst t1::(fst !specilise),(snd !specilise)*2)); true)
+                                          ( (if not (List.exists (fun x -> x = fst t1) (fst !specilise)) then specilise := (fst t1::(fst !specilise),(snd !specilise)*2)); true && check_local xs)
                                            else
                                            let res = check_subtyps (snd t1) (snd t2) right post need_unification in
                                                       if res then res && check_local xs else false
@@ -671,7 +675,8 @@ let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*k
                   with Stateerror _ ->  (true && check_local xs) 
                   in 
   
-  let process_one =check_local mapping in 
+                  (* list_printer (fun (a,b) -> print_endline (a^b)) mapping; *)
+                  let process_one =check_local mapping in 
   
   if not process_one then raise (Entailfail "entail fail in process one")
   else       
@@ -810,10 +815,10 @@ let rec normal_term term pi =
   | Type (BaseTy (Defty (i,a))) -> 
                                                                                     let normal_list = List.fold_right (fun y acc -> (
                                                                                     match y with | BaseTy (Tvar x) -> let r = get_type_for_var x pi in (match r with
-                                                                                                                                             | None -> acc@[y]
-                                                                                                                                             | Some t -> acc@[get_type_from_terms t.term_desc])
-                                                                                    | BaseTy (Defty (g,b)) -> acc@[BaseTy (Defty (g, process_args b pi))]
-                                                                                    | _ -> acc@[y]  )) a [] in 
+                                                                                                                                             | None -> y::acc
+                                                                                                                                             | Some t -> get_type_from_terms t.term_desc::acc)
+                                                                                    | BaseTy (Defty (g,b)) -> BaseTy (Defty (g, process_args b pi)) :: acc
+                                                                                    | _ -> y :: acc  )) a [] in 
                                                                                     {term_type=term.term_type;term_desc = Type (BaseTy (Defty (i,normal_list)))}
   | _ -> term
 
@@ -851,7 +856,7 @@ let rec remove_none alist =
               | Some a ::xs -> a :: remove_none xs 
               | None :: xs ->remove_none xs 
 
-let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (staged_spec ) = 
+let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (for_rec_call):  (staged_spec ) = 
    
   let _binders, (init_state,postcondition) = find_all_binders spec in
     (* list_printer print_endline (List.fold_right (fun a r -> (fst a)::r) binders []); *)
@@ -885,7 +890,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
      let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
      let parameters = List.fold_right (fun x acc -> acc @ [fst x]) parameters [] in
      let mappings = arg_mapping args parameters in 
-     let spec_list = spec_list spec in
+     let spec_list = for_rec_call in
      let check_if_specs_compelete = ref ([],1) in 
      let rec get_post_list spec_l = match spec_l with 
                                 | [] -> []
@@ -914,7 +919,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
      in
      let post_list = get_post_list spec_list in
      let post_list = remove_none post_list in
-     (if  (List.length post_list < snd !check_if_specs_compelete) then print_endline "specs are not compelete for func call");
+     (* (if  (List.length post_list < snd !check_if_specs_compelete) then print_endline "specs are not compelete for func call"); *)
      let (residue,result) = merge_post (post_list) in
      NormalReturn (And (fst residue,fst result), SepConj (snd residue,snd result))
                  
