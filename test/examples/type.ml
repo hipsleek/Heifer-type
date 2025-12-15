@@ -66,12 +66,7 @@ let swap2 x  y  =
 let alise2 x y = swap2 x y 
 (*@  req x->#Ref[a'] * y-> #Ref[b'] ; ens y->#Ref[a'] * x-> #Ref[b']   @*)
 
-let rec map f xs = 
-  (*@  req f:#Any /\ xs:#Nil ; ens res:#Nil 
-    @*)
-              match xs with 
-              | Nil -> Nil 
-              | Cons (y, ys) -> Cons(f y, map f ys)
+
 
 let swap x  y  = 
 (*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y $  
@@ -99,6 +94,15 @@ $  req x->#Ref[a'] /\ x=y ; ens x->#Ref[y] /\ x=y  @*)
 
 let check_spec_completeness x = tail x 
 (*@ req x:#List[a']  ; ens res : # (List[a'] \/ Err[])@*)
+
+
+let rec map f xs  = match xs with 
+              (*@ req f:#Any /\ xs : #Nil ; ens  res : #Nil 
+                 $ req f:#a'-> b' /\ xs :#Cons[a', List[a']]; ens r :#Cons[b', List[b']] @*)
+              |Nil -> Nil 
+              |Cons (y , ys) -> Cons ( f  y  , map f ys )
+
+
 (* let f t = 
     !t := 5
 let test q= 

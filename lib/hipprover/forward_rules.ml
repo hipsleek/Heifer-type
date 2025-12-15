@@ -880,6 +880,22 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program):  (
     NormalReturn (And (fst residue,fst result), SepConj (snd residue,snd result))
 
     (*s*)
+  | CFunCall (name, args) when name = meth.m_name -> 
+     let parameters =  meth.m_params in
+     let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
+     let parameters = List.fold_right (fun x acc -> acc @ [fst x]) parameters [] in
+     let mappings = arg_mapping args parameters in 
+     let spec_list = spec_list spec in
+     let check_if_specs_compelete = ref ([],1) in 
+     let rec get_post_list spec_l = match spec_l with 
+                                | [] -> []
+                                | x::xs -> let r = (try (Some (entail_type state x mappings ~specilise:check_if_specs_compelete))  with Entailfail _ -> None) in r::get_post_list xs
+     in
+     let post_list = get_post_list spec_list in
+     let post_list = remove_none post_list in
+     (if  (List.length post_list < snd !check_if_specs_compelete) then print_endline "specs are not compelete for func call");
+     let (residue,result) = merge_post (post_list) in
+     NormalReturn (And (fst residue,fst result), SepConj (snd residue,snd result))
   | CFunCall (name, args) ->
     
     
