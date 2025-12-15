@@ -102,9 +102,9 @@ let rec map f xs  = match xs with
               |Nil -> Nil 
               |Cons (y , ys) -> Cons ( f  y  , map f ys )
 
-(* let maplist_int_string l f= 
+let maplist_int_string l f= 
    (*@ req l:#List[int] /\ f : # int->str; ens  res : #List[str] @*)
-                        map f l  *)
+                        map f l 
 
 
 (* let f t = 

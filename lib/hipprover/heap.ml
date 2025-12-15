@@ -265,15 +265,28 @@ let rec  check_two_base_types
     | (_, AnyBty) -> true 
     | _ -> false
 
+and check_for_parameter
+      ?(need_unification = false , (ref (True,EmptyHeap), ref (True,EmptyHeap)) ) 
+       input t1 t2 
+      = 
+      match t1,t2 with
+      | (BaseTy x, BaseTy (Tyvar y)) when not (input) -> check_two_base_types x (Tyvar y) ~need_unification:need_unification 
+      | (BaseTy (Tyvar y), BaseTy x) when input -> check_two_base_types x (Tyvar y) ~need_unification:need_unification
+      | (BaseTy _x, BaseTy (Tyvar _y)) when (input) -> false
+      | (BaseTy (Tyvar _y), BaseTy _x) when not input -> false
+      | (BaseTy Defty (n1,l1), BaseTy Defty (n2,l2)) -> if not (n1 = n2) then false else List.equal (check_for_parameter input ~need_unification:need_unification) l1 l2 
+      | (BaseTy x, BaseTy y) -> check_two_base_types x y ~need_unification:need_unification
+      | (ArrowTy (a,b), ArrowTy (c,d)) -> (check_for_parameter input a c ~need_unification:need_unification) && (check_for_parameter input b d ~need_unification:need_unification)
+      |_ -> false
+
 and check_sub_for_arr
        ?(need_unification = false , (ref (True,EmptyHeap), ref (True,EmptyHeap)) ) 
-       ?(covariant = false)
-    t1 t2 = 
+    (t1:ty) (t2:ty) = 
     if t1 = t2 then true else
     match t1,t2 with 
     |(_, BaseTy AnyBty) -> true
-    (* | (ArrowTy (a,b), ArrowTy (c,d)) -> 
-    | BaseTy t1, BaseTy t2 -> check_two_base_types t1 t ~need_unification:need_unification
+    | (ArrowTy (a,b), ArrowTy (c,d)) -> ( check_for_parameter true c a  ~need_unification:need_unification) && (check_for_parameter false b d  ~need_unification:need_unification)
+   (* | BaseTy t1, BaseTy t2 -> check_two_base_types t1 t ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
     | Union (s1,s2) -> check_sub t1 s1 ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
