@@ -264,7 +264,27 @@ let rec  check_two_base_types
     | (Top,_) -> false 
     | (_, AnyBty) -> true 
     | _ -> false
-    
+
+and check_sub_for_arr
+       ?(need_unification = false , (ref (True,EmptyHeap), ref (True,EmptyHeap)) ) 
+       ?(covariant = false)
+    t1 t2 = 
+    if t1 = t2 then true else
+    match t1,t2 with 
+    |(_, BaseTy AnyBty) -> true
+    (* | (ArrowTy (a,b), ArrowTy (c,d)) -> 
+    | BaseTy t1, BaseTy t2 -> check_two_base_types t1 t ~need_unification:need_unification
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
+    | Union (s1,s2) -> check_sub t1 s1 ~need_unification:need_unification
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
+                  || check_sub t1 s2 ~need_unification:need_unification
+                  (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
+    | Inter (s1,s2) -> check_sub t1 s1 ~need_unification:need_unification
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
+  && check_sub t1 s2 ~need_unification:need_unification
+  (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
+    | Neg s -> not (check_sub t1 s ~need_unification:need_unification) *)
+    | _ -> false
 and check_sub 
       ?(need_unification = false , (ref (True,EmptyHeap), ref (True,EmptyHeap)) ) 
 (* ?(state2 = (True,EmptyHeap)) ?(mapping = []) ?(state1 = (True,EmptyHeap))  *)
@@ -281,7 +301,7 @@ and check_sub
   (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
   | Neg s -> not (check_sub t1 s ~need_unification:need_unification)
   (* ~state2:state2 ~state1:state1 ~mapping:mapping)  *)
-  | ArrowTy _-> failwith "fun type to be implemented"
+  | ArrowTy _-> false
   | TAny -> failwith "TAny type to be implemented"
 
 and is_subtype  
@@ -298,6 +318,7 @@ and is_subtype
   (* ~state2:state2 ~state1:state1 ~mapping:mapping  *)
   | Neg s -> not (is_subtype s t2 ~need_unification:need_unification)
   (* ~state2:state2 ~state1:state1 ~mapping:mapping ) not correct placeholder only *)
+  | ArrowTy _ -> check_sub_for_arr t1 t2 ~need_unification:need_unification
   | _ -> failwith "to be implemented"
 
 

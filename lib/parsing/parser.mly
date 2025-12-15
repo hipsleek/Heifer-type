@@ -181,6 +181,8 @@ ty:
       {Neg t}
   | t1 = ty MINUSGREATER t2 = ty
       {ArrowTy (t1, t2)}
+  | LPAREN t = ty RPAREN
+      {t}
   | TANY 
       {TAny}
 ;

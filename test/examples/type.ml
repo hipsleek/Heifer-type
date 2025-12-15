@@ -98,13 +98,13 @@ let check_spec_completeness x = tail x
 
 let rec map f xs  = match xs with 
               (*@ req f:#Any /\ xs : #Nil ; ens  res : #Nil 
-                 $ req f:#a'-> b' /\ xs :#Cons[a', List[a']]; ens res :#Cons[b', List[b']] @*)
+                 $ req f:# (a'-> b') /\ xs :#Cons[a', List[a']]; ens res :#Cons[b', List[b']] @*)
               |Nil -> Nil 
               |Cons (y , ys) -> Cons ( f  y  , map f ys )
 
-let maplist_int_string l f= 
-   (*@ req l:#List[int] /\ f : #int->str; ens  res : #List[str] @*)
-                        map f l 
+(* let maplist_int_string l f= 
+   (*@ req l:#List[int] /\ f : # int->str; ens  res : #List[str] @*)
+                        map f l  *)
 
 
 (* let f t = 
