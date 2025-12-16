@@ -28,6 +28,8 @@ val merge_heap: kappa -> kappa -> kappa
 
 val merge_pure: pi -> pi -> pi
 
+val remove_from_pure : pi -> ty_var -> pi
+
 val check_equality: ty_var ->
 pi * 'a ->
 ty_var ->

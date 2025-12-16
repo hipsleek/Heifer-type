@@ -17,6 +17,7 @@ module StringMap = Map.Make(String)
 exception Entailfail of string
 exception Nomatch
 exception Err of (pi*kappa)
+exception Partial of (name list)
 
 (*
 open Normalize
@@ -701,6 +702,13 @@ let rec arg_mapping l1 l2 = match (l1,l2) with
             |([],[]) -> []
             |_ -> failwith "parameter lists length not match"
 
+let rec arg_mapping_partial l1 l2 = match (l1,l2) with 
+            |(x::xs,y::ys) -> let r = arg_mapping_partial xs ys in
+                                  (x,y)::(fst r), snd r
+            |([],[]) -> [],[]
+            |([],x::xs) -> [], x::xs
+            |_ -> failwith "parameter lists length not match"
+
 let make_post post = 
   match post with 
   | NormalReturn (a,b) -> Sequence (Require (a,b), NormalReturn (a,b))
@@ -834,9 +842,38 @@ let check_fun_in_spec name state =
   let _find = find_in_state name state in 
   true 
   with Stateerror _ -> false 
-let rec spec_list spec = match spec with 
-      | Multi (s1,s2) -> spec_list s1 @ spec_list s2 
-      | _ -> [spec] 
+
+let make_new_return ori_res par_list pre = 
+    let rec helper alist = 
+      match alist with 
+      |[] -> []
+      | x::xs -> let r = find_in_state x pre in 
+                 if (fst r) = "h" then failwith "partial para application only for pure type currently" 
+                 else get_type_from_terms (snd (snd r)).term_desc :: helper xs in 
+    let merge_post inputs res = 
+        match res.term_desc with 
+        | Type (ArrowTy (x,y)) -> Type (ArrowTy (inputs@x,y)) 
+        | Type x -> Type (ArrowTy (inputs,x))
+        | _ -> failwith "return should be a type spec" in 
+     let result = merge_post (helper par_list) ori_res 
+     in {term_desc=result;term_type = Unknown}
+
+let make_spec pre post = 
+  Sequence (Require (fst pre,snd pre), NormalReturn (fst post, snd post)) 
+
+let rec spec_list spec pars = match spec with 
+      | Multi (s1,s2) -> spec_list s1 pars @ spec_list s2 pars 
+      | _ -> if (List.length pars = 0) then [spec] else 
+             let pre,post = find_pre_post spec in
+             let ori_res = snd (snd (find_in_state "res" post)) in 
+             let new_res = make_new_return ori_res pars pre in 
+             let old_var = fresh_variable () in 
+             let change_x_to_old_x = swap_var_name_in_state "res" old_var post in
+             let new_post = (And (fst change_x_to_old_x, Colon ("res", new_res)),snd change_x_to_old_x) in 
+             let new_pi = List.fold_left (fun acc x -> remove_from_pure  acc x) (fst pre) pars in 
+             let new_pre = new_pi, (snd pre) in
+             [make_spec new_pre new_post]
+
 let find_arg_in_post post v= 
   match post with 
   |NormalReturn (a,b) ->( try let _r = find_in_state v (a,b) in true with Stateerror _ ->  false )
@@ -862,7 +899,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (fo
   let _binders, (init_state,postcondition) = find_all_binders spec in
     (* list_printer print_endline (List.fold_right (fun a r -> (fst a)::r) binders []); *)
   let rec forward state (body:core_lang_desc) : (staged_spec) = 
-    (* let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in *)
+    let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in
     match body with
   | CValue v ->
     constant_to_singleton_type_re v state
@@ -910,9 +947,9 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (fo
      let parameters =  spec_details.p_params in
      let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
      let parameters = List.fold_right (fun x acc -> acc @ [fst x]) parameters [] in
-     let mappings = arg_mapping args parameters in 
+     let mappings,left_paras = arg_mapping_partial args parameters in 
      let spec = spec_details.p_body in 
-     let spec_list = spec_list spec in
+     let spec_list = spec_list spec left_paras in
      let check_if_specs_compelete = ref ([],1) in 
      let rec get_post_list spec_l = match spec_l with 
                                 | [] -> []
@@ -989,7 +1026,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (fo
       NormalReturn (And ((Colon ("res",  ({term_desc = Type (BaseTy (Defty ("Err",[]))); term_type=Bool}))), fst change_x_to_old_x), snd change_x_to_old_x)
     )
   in 
-  (* print_endline (string_of_staged_spec (rs)); *)
+  print_endline (string_of_staged_spec (rs));
   let post = (make_post_state rs) in 
   let acc = match find_arg_in_post postcondition "res" with |true -> ["res"] |false -> [] in
   let argument_in_post = List.filter (fun x -> find_arg_in_post postcondition (fst x)) meth.m_params in

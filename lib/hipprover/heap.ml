@@ -116,6 +116,7 @@ let rec find_var_in_pure (v:string) (h:pi) =
        (find_var_in_pure v a) @ (find_var_in_pure v b)
   | _ -> []
 
+
 let rec swap_var_name_in_pure (ori:string) (replace:string) (s:pi) = 
   match s with
   | Colon (x,t) -> if x = ori then Colon (replace,t) else Colon (x,t)
@@ -124,6 +125,15 @@ let rec swap_var_name_in_pure (ori:string) (replace:string) (s:pi) =
   | And (a, b) ->
        And (swap_var_name_in_pure ori replace a, swap_var_name_in_pure ori replace b)
   | _ -> s
+
+let rec remove_from_pure state ori = 
+  match  state with 
+  | Colon (x,t) -> if x = ori then True else Colon (x,t)
+  | Atomic (EQ, a, b) -> if (Typed_core_ast.return_var_name a.term_desc) = ori || (Typed_core_ast.return_var_name b.term_desc) = ori then failwith "cannot be heap resource" else state
+
+  | And (a, b) ->
+       And (remove_from_pure  a ori, remove_from_pure  b ori)
+  | _ -> state
 
 
 let find_in_state (v:string) (s:(pi*kappa)) = 
