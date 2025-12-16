@@ -170,19 +170,42 @@ bty:
   | v = CAPITAL_IDENT LBRACKET l = opt_ty_var_list  RBRACKET
     {Defty (v,l)}
 ;
+
+single_para:
+  | v = bty
+      {BaseTy v}
+  | LPAREN t = functuple RPAREN 
+      {t}
+
+
+
+inputs:
+   | single_para
+      {[$1]}
+   | inputs MINUSGREATER single_para 
+      {$1 @ [$3]}
+
+
+functuple:
+  | v1=inputs MINUSGREATER v2 = single_para
+    {(ArrowTy (v1,v2))}
+  |LPAREN functuple RPAREN
+    {$2}
+
+;
 ty:
   | v = bty
       {BaseTy v}
+  | v = functuple
+      {v}
+  | LPAREN ty RPAREN
+      {$2}
   | LPAREN t1 = ty DISJUNCTION t2 = ty RPAREN
       {Union (t1, t2)}
   | LPAREN t1 = ty CONJUNCTION t2 = ty RPAREN
       {Inter (t1, t2)} 
   | NOT LPAREN t=ty RPAREN
       {Neg t}
-  | t1 = ty MINUSGREATER t2 = ty
-      {ArrowTy (t1, t2)}
-  | LPAREN t = ty RPAREN
-      {t}
   | TANY 
       {TAny}
 ;

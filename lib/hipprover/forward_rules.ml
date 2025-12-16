@@ -782,8 +782,9 @@ let rec get_type_for_var var pi =
 
 let rec spec_conversion_list arrow_type args = 
     match arrow_type,args with
-    | (ArrowTy (a,b)), x::xs -> let r =  spec_conversion_list b xs in ((x,a)::fst r, snd r) 
-    | x,[] -> ([],("res",x))
+    | (ArrowTy (a::ax,b)), x::xs -> let r =  spec_conversion_list (ArrowTy (ax,b)) xs in ((x,a)::fst r, snd r) 
+    | (ArrowTy (a::ax,b)), [] -> ([], ("res", (ArrowTy (a::ax,b))))
+    | (ArrowTy ([],b)), [] -> ([],("res",b))
     | _,_ -> failwith "not Arrow type"
 
 let rec convert tlist = 

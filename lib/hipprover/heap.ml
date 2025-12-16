@@ -170,7 +170,7 @@ let rec unify_terms_in_heap (ori:string) (replace:ty) (s:kappa) =
 
 let rec unify_for_arrow_type ori arr replace = 
   match arr with 
-  | ArrowTy (a,b) -> ArrowTy (unify_for_arrow_type ori a replace, unify_for_arrow_type ori b replace) 
+  | ArrowTy (a,b) -> ArrowTy (List.map (fun x -> unify_for_arrow_type ori x replace) a, unify_for_arrow_type ori b replace) 
   | (BaseTy (Tyvar a)) -> if a = ori then replace else (BaseTy (Tyvar a)) 
   | (BaseTy (Defty (a,b)))  ->  let des =  (BaseTy (Defty (a, unify_terms_for_defty ori b replace))) in des
   | _ -> arr
@@ -276,8 +276,9 @@ and check_for_parameter
       | (BaseTy (Tyvar _y), BaseTy _x) when not input -> false
       | (BaseTy Defty (n1,l1), BaseTy Defty (n2,l2)) -> if not (n1 = n2) then false else List.equal (check_for_parameter input ~need_unification:need_unification) l1 l2 
       | (BaseTy x, BaseTy y) -> check_two_base_types x y ~need_unification:need_unification
-      | (ArrowTy (a,b), ArrowTy (c,d)) -> (check_for_parameter input a c ~need_unification:need_unification) && (check_for_parameter input b d ~need_unification:need_unification)
+      | (ArrowTy (a,b), ArrowTy (c,d)) -> (List.equal (fun x y -> check_for_parameter input x y ~need_unification:need_unification) c a) && (check_for_parameter input b d ~need_unification:need_unification)
       |_ -> false
+
 
 and check_sub_for_arr
        ?(need_unification = false , (ref (True,EmptyHeap), ref (True,EmptyHeap)) ) 
@@ -285,7 +286,7 @@ and check_sub_for_arr
     if t1 = t2 then true else
     match t1,t2 with 
     |(_, BaseTy AnyBty) -> true
-    | (ArrowTy (a,b), ArrowTy (c,d)) -> ( check_for_parameter true c a  ~need_unification:need_unification) && (check_for_parameter false b d  ~need_unification:need_unification)
+    | (ArrowTy (a,b), ArrowTy (c,d)) ->(List.equal ( fun x y -> check_for_parameter true x y  ~need_unification:need_unification) c a) && (check_for_parameter false b d  ~need_unification:need_unification)
    (* | BaseTy t1, BaseTy t2 -> check_two_base_types t1 t ~need_unification:need_unification
   (* ~state2:state2 ~state1:state1 ~mapping:mapping *)
     | Union (s1,s2) -> check_sub t1 s1 ~need_unification:need_unification

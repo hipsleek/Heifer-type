@@ -48,7 +48,7 @@ and ty = Untyped_core_ast.ty =
   | Union of ty * ty 
   | Inter of ty * ty 
   | Neg of ty 
-  | ArrowTy of ty * ty
+  | ArrowTy of ty list * ty
   | TAny
 
 and term_desc =
@@ -212,7 +212,7 @@ let rec map_typ_to_ty typ1  =
   | Int ->  (BaseTy IntBty)
   | Bool ->  (BaseTy BoolBty)
   | TyString ->  (BaseTy TyStringBty)
-  | Arrow (a,b)->  (ArrowTy (map_typ_to_ty a, map_typ_to_ty b))
+  | Arrow (a,b)->  (ArrowTy ([map_typ_to_ty a], map_typ_to_ty b))
   | TConstr (a,b) ->  (BaseTy (Defty (a, (List.map map_typ_to_ty b))))
   | TVar s ->  (BaseTy (Tyvar s))
   | _ -> failwith "unsupported constructor"
@@ -222,7 +222,7 @@ let rec map_ter_to_ty t =
     | Var v -> BaseTy (Tvar v)
     | Const c -> BaseTy (Consta c) 
     | Construct (name, terms) -> BaseTy (Defty (name, (List.map map_ter_to_ty terms)))
-    | _ -> map_typ_to_ty t.term_type
+    | _ -> failwith "not neccessary"
     
 
 

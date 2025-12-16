@@ -42,7 +42,7 @@ and ty =
   | Union of ty * ty 
   | Inter of ty * ty 
   | Neg of ty 
-  | ArrowTy of ty * ty
+  | ArrowTy of ty list * ty
   | TAny
 
 

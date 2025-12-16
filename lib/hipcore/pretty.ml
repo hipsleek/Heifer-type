@@ -99,7 +99,7 @@ and string_of_ty t : string =
   | Union (t1, t2) -> string_of_ty t1 ^ "\/" ^ string_of_ty t2
   | Inter (t1, t2) -> string_of_ty t1 ^ "/\\" ^ string_of_ty t2
   | Neg t -> "not(" ^ string_of_ty t ^ ")"
-  | ArrowTy (t1, t2) -> string_of_ty t1 ^ "->" ^ string_of_ty t2
+  | ArrowTy (t1, t2) -> (List.fold_left (fun acc x-> acc ^ (string_of_ty x) ^ "->" ) "" t1 ) ^ string_of_ty t2
   | TAny -> "_"
 
 let rec string_of_term t : string =

@@ -15,7 +15,7 @@ let plus x y = x + y
 (*@  req x:#int /\ y:#int ; ens res : # int @*)
 
 let apply f x = f x 
-(*@  req f:#a'-> b' /\ x:#a' ; ens res : # b' @*)
+(*@  req f:#(a'-> b')  /\ x:#a' ; ens res : # b' @*)
 
 let deref x = !x 
 (*@  req x:#Ref[t']  ; ens res : # t' $ req x->#Ref[t']  ; ens  x->#Ref[t'] /\ res : # t' @*)
@@ -98,7 +98,7 @@ let check_spec_completeness x = tail x
 
 let rec map f xs  = match xs with 
               (*@ req f:#Any /\ xs : #Nil ; ens  res : #Nil 
-                 $ req f:# (a'-> b') /\ xs :#Cons[a', List[a']]; ens res :#Cons[b', List[b']] @*)
+                 $ req f:# (a'-> b')  /\ xs :#Cons[a', List[a']]; ens res :#Cons[b', List[b']] @*)
               |Nil -> Nil 
               |Cons (y , ys) -> Cons ( f  y  , map f ys )
 
@@ -106,6 +106,11 @@ let maplist_int_string l f=
    (*@ req l:#List[int] /\ f : # int->str; ens  res : #List[str] @*)
                         map f l 
 
+let more_args f x y = f x y 
+(*@  req f:#(a'-> b'-> c') /\ x:#a' /\ y:#b' ; ens res : # c' @*)
+
+let test x y = more_args plus x y 
+(*@  req plus:#(int-> int-> int) /\ x:#int /\ y:#int ; ens res : # int @*)
 
 (* let f t = 
     !t := 5
