@@ -21,7 +21,8 @@ let deref x = !x
 (*@  req x:#Ref[t']  ; ens res : # t' $ req x->#Ref[t']  ; ens  x->#Ref[t'] /\ res : # t' @*)
 
 let tail x = 
-  (*@  req x:#Cons[t',List[t']]  ; ens res : # List[t'] $  req x:#Nil[]  ; ens res : # Err[] 
+  (*@  req x:#Cons[t',List[t']]  ; ens res : # List[t'] 
+        $  req x:#Nil[]  ; ens res : # Err[] 
         $ req x->#Cons[t',List[t']]  ; ens res : # List[t']
         $ req x->#Nil  ; ens res : # Err
         @*)
