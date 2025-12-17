@@ -115,9 +115,15 @@ let test x y = more_args plus x y
 let partial_app x = more_args plus x 
 (*@  req plus:#(int-> int-> int) /\ x:#int ; ens res : # int -> int @*)
 
-(* let partial_app2 y = partial_app y
-@ assume req  y:#int ; ens res : #int @ *)
+let partial_app2 y = 
+(*@ req y:#int ; ens res : #int -> int @*)
+partial_app y
 
+let partial_app3 y = 
+(*@ req y:#int ; ens res : #int -> int @*)
+  test y
+
+  
 (* let f t = 
     !t := 5
 let test q= 
