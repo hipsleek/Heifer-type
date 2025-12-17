@@ -626,6 +626,13 @@ let is_list_type t =
   | (Type (BaseTy (Defty ("List",[_])))) -> true 
   | _ -> false
 
+let is_cons_nil_type t = 
+  match t.term_desc with
+  | (Type (BaseTy (Defty ("Nil",[])))) 
+  | (Type (BaseTy (Defty ("Cons",[_])))) -> true 
+  | _ -> false
+
+
 let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
   
   let (req, ens) = find_pre_post right_ori in
@@ -667,7 +674,7 @@ let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*k
                                            else
                                            let res = check_subtyps (snd t1) (snd t2) right post need_unification in
                                                       if res then res && check_local xs else false
-                   |(("h",t1),("h",t2)) -> if is_list_type (snd t1) then 
+                   |(("h",t1),("h",t2)) -> if is_list_type (snd t1) && is_cons_nil_type (snd t2) then 
                                            let norm_post = normalise_for_var (fst t2) !post in 
                                            post := snd norm_post; 
                                            let norm_right = normalise_for_var (fst t2) !right in 
