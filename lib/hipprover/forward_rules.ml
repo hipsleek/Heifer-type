@@ -693,7 +693,7 @@ let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*k
                         if (fst r) = "s" then false else if (PointsTo (a,b) = PointsTo (fst (snd r), snd (snd r))) then (remove_list_3 := (fst (snd r))::!remove_list_3;true) else false 
     in 
   let entail_result = check_remaining (snd remaining_frame) in 
-  let final_residue = List.fold_right (fun x acc-> remove_from_residue_kappa acc x) !remove_list_3 !left in 
+  let final_residue = List.fold_left (fun acc x-> remove_from_residue_kappa acc x) !left !remove_list_3  in 
   post := change_var_name mapping !post;
   if entail_result then (final_residue, !post) else raise (Entailfail "fail in remaining")
 
@@ -872,6 +872,7 @@ let rec spec_list spec pars = match spec with
              let new_post = (And (fst change_x_to_old_x, Colon ("res", new_res)),snd change_x_to_old_x) in 
              let new_pi = List.fold_left (fun acc x -> remove_from_pure  acc x) (fst pre) pars in 
              let new_pre = new_pi, (snd pre) in
+             (* print_endline (string_of_state (new_pre)^ "=>"^(string_of_state new_post)); *)
              [make_spec new_pre new_post]
 
 let find_arg_in_post post v= 
@@ -886,7 +887,7 @@ let merge (r1,p1) (r2,p2) =
 
 let merge_post plist = match plist with 
                       |[]->failwith "entail fail" 
-                      |x::xs -> List.fold_right (fun x acc -> merge x acc) xs x
+                      |x::xs -> List.fold_left (fun acc x -> merge acc x) x xs
                       
 let rec remove_none alist = 
               match alist with 
@@ -899,7 +900,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (fo
   let _binders, (init_state,postcondition) = find_all_binders spec in
     (* list_printer print_endline (List.fold_right (fun a r -> (fst a)::r) binders []); *)
   let rec forward state (body:core_lang_desc) : (staged_spec) = 
-    let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in
+    (* let () = print_endline (string_of_staged_spec (Require (fst state, snd state))) in *)
     match body with
   | CValue v ->
     constant_to_singleton_type_re v state
@@ -915,7 +916,7 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (fo
      (* print_endline name; *)
       call_primitive_type name args state
   | CFunCall (name,args) when (check_fun_in_spec name state) -> 
-    let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
+    let args = List.fold_left (fun acc x-> acc @ [get_var_name_from_terms x]) [] args  in
     let fun_type = snd (snd(find_in_state name state)) in 
     let spec = spec_conversion fun_type args in 
     let mappings = arg_mapping args args in
@@ -925,8 +926,8 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (fo
     (*s*)
   | CFunCall (name, args) when name = meth.m_name -> 
      let parameters =  meth.m_params in
-     let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
-     let parameters = List.fold_right (fun x acc -> acc @ [fst x]) parameters [] in
+     let args = List.fold_left (fun acc x-> acc @ [get_var_name_from_terms x]) [] args  in
+     let parameters = List.fold_left (fun  acc x -> acc @ [fst x]) [] parameters  in
      let mappings = arg_mapping args parameters in 
      let spec_list = for_rec_call in
      let check_if_specs_compelete = ref ([],1) in 
@@ -945,8 +946,10 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (fo
      let spec_table = prog.cp_predicates in 
      let spec_details = SMap.find name spec_table in 
      let parameters =  spec_details.p_params in
-     let args = List.fold_right (fun x acc -> acc @ [get_var_name_from_terms x]) args [] in
-     let parameters = List.fold_right (fun x acc -> acc @ [fst x]) parameters [] in
+     let args = List.fold_left (fun acc x-> acc @ [get_var_name_from_terms x]) [] args  in
+     let parameters = List.fold_left (fun  acc x -> acc @ [fst x]) [] parameters  in
+     (* list_printer (fun x -> print_endline x) args;
+     list_printer (fun x -> print_endline x) parameters; *)
      let mappings,left_paras = arg_mapping_partial args parameters in 
      let spec = spec_details.p_body in 
      let spec_list = spec_list spec left_paras in
@@ -1026,13 +1029,13 @@ let analyze_type_spec (spec:staged_spec) (meth:meth_def) (prog:core_program) (fo
       NormalReturn (And ((Colon ("res",  ({term_desc = Type (BaseTy (Defty ("Err",[]))); term_type=Bool}))), fst change_x_to_old_x), snd change_x_to_old_x)
     )
   in 
-  print_endline (string_of_staged_spec (rs));
+  (* print_endline (string_of_staged_spec (rs)); *)
   let post = (make_post_state rs) in 
   let acc = match find_arg_in_post postcondition "res" with |true -> ["res"] |false -> [] in
   let argument_in_post = List.filter (fun x -> find_arg_in_post postcondition (fst x)) meth.m_params in
   let postcondition = (make_post postcondition) in
   
-  let map_args =   (make_list_map (List.fold_right (fun x acc -> acc @ [fst x]) argument_in_post acc)) in
+  let map_args =   (make_list_map (List.fold_left (fun acc x-> acc @ [fst x]) acc argument_in_post)) in
 
   try
     
