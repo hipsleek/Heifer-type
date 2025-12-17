@@ -21,7 +21,10 @@ let deref x = !x
 (*@  req x:#Ref[t']  ; ens res : # t' $ req x->#Ref[t']  ; ens  x->#Ref[t'] /\ res : # t' @*)
 
 let tail x = 
-  (*@  req x:#Cons[t',List[t']]  ; ens res : # List[t'] $  req x:#Nil[]  ; ens res : # Err[] @*)
+  (*@  req x:#Cons[t',List[t']]  ; ens res : # List[t'] $  req x:#Nil[]  ; ens res : # Err[] 
+        $ req x->#Cons[t',List[t']]  ; ens res : # List[t']
+        $ req x->#Nil  ; ens res : # Err
+        @*)
              match x with
              | Cons (x,xs) -> xs 
              | Nil -> failwith "not supported"        
@@ -85,7 +88,12 @@ let list_seg x = x
 $ req x->#Nil; ens x->#List[a'] /\ res = x
 $ req x->#Cons[int, y] * y -> #Cons[int,z] * z->#Cons[int,Nil] ; ens x->#List[int] /\ res=x
 $ req x->#Cons[1, y] * y -> #Cons[2,z] * z->#Cons[3,Nil] ; ens x->#List[int] /\ res=x
+$ req x->#Cons[a', y] * y -> #List[a']; ens x->#List[a'] /\ res=x
+$ req x->#Nil ; ens x->#Nil /\ res=x
 @*)
+
+let list_entail y =list_seg y 
+(*@  req y->#List[a'] ; ens y->#List[a'] /\ res=y @*)
 
 let two_pointer x  y  z= 
 (*@  req x->#Ref[a'] * y->#Ref[b'] ; ens x->#Ref[Ref[b']]  
@@ -98,13 +106,14 @@ let check_spec_completeness x = tail x
 
 let rec map f xs  = match xs with 
               (*@ req f:#Any /\ xs : #Nil ; ens  res : #Nil 
-                 $ req f:# (a'-> b')  /\ xs :#Cons[a', List[a']]; ens res :#Cons[b', List[b']] @*)
+                 $ req f:# (a'-> b')  /\ xs :#Cons[a', List[a']]; ens res :#Cons[b', List[b']] 
+                 $ req f:#Any /\ xs -> #Nil ; ens xs -> #Nil /\ res : #Nil 
+                 $ req f:# (a'-> b')  /\ xs -> #Cons[a', List[a']]; ens  xs -> #Cons[a', List[a']] /\ res :#Cons[b', List[b']] 
+                 @*)
               |Nil -> Nil 
               |Cons (y , ys) -> Cons ( f  y  , map f ys )
 
-let maplist_int_string l f= 
-   (*@ req l:#List[int] /\ f : # int->str; ens  res : #List[str] @*)
-                        map f l 
+
 
 let more_args f x y = f x y 
 (*@  req f:#(a'-> b'-> c') /\ x:#a' /\ y:#b' ; ens res : # c' @*)
@@ -123,7 +132,15 @@ let partial_app3 y =
 (*@ req y:#int ; ens res : #int -> int @*)
   test y
 
-  
+let maplist_int_string l f= 
+   (*@ req l:#List[int] /\ f : # int->str; ens  res : #List[str] 
+   $ req l->#List[int] /\ f : # int->str; ens   l->#List[int] /\ res : #List[str] 
+   @*)
+                        map f l 
+
+
+
+
 (* let f t = 
     !t := 5
 let test q= 

@@ -621,6 +621,11 @@ let is_list_to_nil_cons t1 t2 right post need_unification =
               else false
   | _ -> false
 
+let is_list_type t = 
+  match t.term_desc with
+  | (Type (BaseTy (Defty ("List",[_])))) -> true 
+  | _ -> false
+
 let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*kappa) (right_ori:staged_spec) mapping = 
   
   let (req, ens) = find_pre_post right_ori in
@@ -662,7 +667,21 @@ let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*k
                                            else
                                            let res = check_subtyps (snd t1) (snd t2) right post need_unification in
                                                       if res then res && check_local xs else false
-                   |(("h",t1),("h",t2)) -> let res = check_subtyps (snd t1) (snd t2) right post need_unification in 
+                   |(("h",t1),("h",t2)) -> if is_list_type (snd t1) then 
+                                           let norm_post = normalise_for_var (fst t2) !post in 
+                                           post := snd norm_post; 
+                                           let norm_right = normalise_for_var (fst t2) !right in 
+                                           right := snd norm_right;
+                                           let is_list_to_nil_cons = is_list_to_nil_cons (fst norm_right) (snd t1) right post need_unification in 
+                                           (if need_unification && (is_list_to_nil_cons) then 
+                                              ((if not (List.exists (fun x -> x = fst t1) (fst !specilise)) then 
+                                                  (specilise := (fst t1::(fst !specilise),(snd !specilise)*2)); 
+                                                  remove_list_1 :=(fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2);
+                                                        true && check_local xs)
+                                              else false)
+                                           
+                                           else
+                                           let res = check_subtyps (snd t1) (snd t2) right post need_unification in 
                                            if res then (remove_list_1 :=(fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; (res && check_local xs)) else 
                                            let norm = normalise_for_var (fst  t1) !left in 
                                            left := snd norm;
@@ -671,7 +690,8 @@ let entail_type ?(specilise= ref ([],1)) ?(need_unification=true) (left_ori:pi*k
                                            
                                            if res2 then (remove_list_1 := (fst t1)::!remove_list_1;remove_list_2 := (fst t2)::!remove_list_2; 
                                            (res2 && check_local xs)) else false 
-                   | _ -> failwith "to be implemented1"
+                   |(("s",_),("h",_)) -> false
+                   | _ -> false (*todo, separation weaken to pure*)
                    ) 
                   with Stateerror _ ->  (true && check_local xs) 
                   in 

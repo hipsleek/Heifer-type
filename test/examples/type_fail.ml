@@ -19,3 +19,13 @@ let swap x  y  =
               update y  v1 
 let update m v = m := v
 (*@  req m->#Ref[t'] /\ v:#a' ; ens  m->#Ref[a']  @*)
+
+let list_seg x = x
+(*@  req x->#Cons[int, y] * y -> #Cons[int,z] * z->#Cons[int,Nil] ; ens x->#Cons[int, Cons[int, Cons[int,Nil]]] /\ res=x
+$ req x->#Nil; ens x->#List[a'] /\ res = x
+$ req x->#Cons[int, y] * y -> #Cons[int,z] * z->#Cons[int,Nil] ; ens x->#List[int] /\ res=x
+$ req x->#Cons[1, y] * y -> #Cons[2,z] * z->#Cons[3,Nil] ; ens x->#List[int] /\ res=x
+@*)
+
+let list_seg_fail y =list_seg y 
+(*@  req y->#List[a'] ; ens y->#List[a'] /\ res=y @*)
