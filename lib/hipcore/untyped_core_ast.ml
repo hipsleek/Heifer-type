@@ -151,6 +151,7 @@ and staged_spec =
   | TryCatch of (pi * kappa * trycatch * term)
   | Multi of staged_spec * staged_spec
   | Assume of staged_spec
+  | Pred of string * term list * (pi * kappa) 
 
 (* and spec = stagedSpec list
 and disj_spec = spec list *)

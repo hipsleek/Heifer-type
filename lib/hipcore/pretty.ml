@@ -174,6 +174,7 @@ and  string_of_staged_spec (st:staged_spec) : string =
   | Disjunction (lhs, rhs) -> Format.sprintf "(%s) \\/ (%s)" (string_of_staged_spec lhs) (string_of_staged_spec rhs)
   | Multi (s1,s2) -> Format.sprintf "%s $ %s" (string_of_staged_spec s1)  (string_of_staged_spec s2) 
   | Assume s -> string_of_staged_spec s
+  | Pred (name, tlist, (p,h)) -> name ^ "(" ^ (String.concat "" (List.map string_of_term tlist)) ^ ") = " ^ (string_of_state (p,h)) 
 
 and string_of_instant (str, ar_Li): string =
   (* syntax is like OCaml type constructors, e.g. Foo, Foo (), Foo (1, ()) *)
