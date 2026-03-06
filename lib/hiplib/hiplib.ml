@@ -498,6 +498,12 @@ let run_file input_file =
   let lines = input_lines chan in
   let content = String.concat "\n" lines in
   let content = preprocess_spec_comments content in
+  begin match Sys.getenv_opt "PARSE_SPEC_EXAMPLE" with
+  | Some spec ->
+      let staged_spec = Ocamlfrontend.Annotation.parse_staged_spec spec in
+      Format.printf "[ Parsed staged spec ]\n%s@." (Hipcore.Pretty.string_of_staged_spec staged_spec)
+  | None -> ()
+  end;
   let file_kind = get_file_type input_file in
   run_string file_kind content;
   close_in chan;

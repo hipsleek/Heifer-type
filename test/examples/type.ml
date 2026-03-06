@@ -48,6 +48,12 @@ let inc_if_int y =
 
 let string_of_ints x = failwith "assume" 
  (*@ assume req x:#int; ens res : #str @*)
+
+(* Pred parser example (staged_spec):
+  p_list(x) = x->#List[int]
+  p_ref(x) = x:#Ref[int] /\ emp
+*)
+
 let inc_inplace x = x := string_of_ints (!x +1)
  (*@ req x->#Ref[int]; ens x -> # Ref[str] @*)
 

@@ -302,8 +302,11 @@ single_staged_spec:
       { let (p, k) = s in Require (p, k) }
   | ENSURES s = state
       { let (p, k) = s in NormalReturn (p, k) }
-  | va = fn
-      { let (v, args) = va in HigherOrder (v, args) }
+  | v = LOWERCASE_IDENT LPAREN args = separated_list(COMMA, term) RPAREN EQUAL s = state
+      { let (p, k) = s in
+        Pred (v, args, (p, k)) }
+  | v = LOWERCASE_IDENT LPAREN args = separated_list(COMMA, term) RPAREN
+      { HigherOrder (v, args) }
   | SHIFT LPAREN v = LOWERCASE_IDENT DOT s = single_staged_spec RPAREN
       { (* TODO: shiftc *)
         let x = Variables.fresh_variable ~v:"x" "continuation argument" in
