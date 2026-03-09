@@ -17,6 +17,12 @@ let id2 y =  y
 let pred_id x = x
 (*@ req p_list(x); ens res = x /\ p_list(x) @*)
 
+let pred_unfold y = y
+(*@ req p_list(y); ens res = x /\ x->#List[int] @*)
+
+let pred_fold x = x
+(*@ req x->#List[int]; ens res = x /\ p_list(x) @*)
+
 let plus x y = x + y 
 (*@  req x:#int /\ y:#int ; ens res : # int @*)
 

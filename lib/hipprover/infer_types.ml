@@ -466,7 +466,17 @@ and infer_types_staged_spec ss : (staged_spec * typ option) using_env =
       let* (p, k) = infer_types_state (p, k) in
       return (Require (p, k), None)
   | NormalReturn (p, k) ->
+      let* env_before = State.get in
       let* (p, k) = infer_types_state (p, k) in
+      let* env_after = State.get in
+      let vars_before = env_before.vartypes |> SMap.to_seq |> Seq.map fst |> SSet.of_seq in
+      let vars_after = env_after.vartypes |> SMap.to_seq |> Seq.map fst |> SSet.of_seq in
+      let newly_introduced = SSet.diff vars_after vars_before in
+      if not (SSet.is_empty newly_introduced) then
+        failwith
+          (Format.asprintf
+             "postcondition introduces unbound variable(s): %s"
+             (newly_introduced |> SSet.to_list |> String.concat ", "));
       let* result_type = type_of_result_of_state (p, k) in
       return (NormalReturn (p, k), result_type)
   | HigherOrder (f, args) ->

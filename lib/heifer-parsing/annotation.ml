@@ -32,6 +32,11 @@ let rec subst_term (env : (string * term) list) (t : term) : term =
   | TTuple ts -> TTuple (List.map (subst_term env) ts)
   | Type _ -> t
 
+let subst_ident (env : (string * term) list) (v : string) : string =
+  match List.assoc_opt v env with
+  | Some (Var v') -> v'
+  | _ -> v
+
 let rec subst_pi env p =
   match p with
   | True | False -> p
@@ -42,12 +47,12 @@ let rec subst_pi env p =
   | Not p1 -> Not (subst_pi env p1)
   | Predicate (name, args) -> Predicate (name, List.map (subst_term env) args)
   | Subsumption (t1, t2) -> Subsumption (subst_term env t1, subst_term env t2)
-  | Colon (v, t) -> Colon (v, subst_term env t)
+  | Colon (v, t) -> Colon (subst_ident env v, subst_term env t)
 
 let rec subst_kappa env k =
   match k with
   | EmptyHeap -> k
-  | PointsTo (v, t) -> PointsTo (v, subst_term env t)
+  | PointsTo (v, t) -> PointsTo (subst_ident env v, subst_term env t)
   | SepConj (k1, k2) -> SepConj (subst_kappa env k1, subst_kappa env k2)
 
 let subst_state env (p, k) = (subst_pi env p, subst_kappa env k)
