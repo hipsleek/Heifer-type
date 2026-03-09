@@ -105,8 +105,8 @@ let swap x  y  =
               update x  v2  ;
               update y  v1 
 
-          let swap_mixed x y = swap x y
-          (*@ req p_int_cell(x) /\ y->#Ref[str]; ens x->#Ref[str] /\ p_int_cell(y) @*)
+let swap_mixed x y = swap x y
+    (*@ req p_int_cell(x) /\ y->#Ref[str]; ens x->#Ref[str] /\ p_int_cell(y) @*)
 
 let alise x y = swap x y 
 (*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y  $ 
