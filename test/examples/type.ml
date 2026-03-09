@@ -1,3 +1,6 @@
+(*@ pred p_list(x) = x->#List[int] @*)
+(*@ pred p_ref(x) = x:#Ref[int] /\ emp @*)
+
 type h = |A 
          |B 
 

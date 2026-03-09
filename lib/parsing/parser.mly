@@ -90,6 +90,8 @@ open Hiptypes
 %type <Hiptypes.term> parse_term
 %start parse_lemma
 %type <Hiptypes.lemma> parse_lemma
+%start parse_type_pred_decl
+%type <Hiptypes.type_pred> parse_type_pred_decl
 %%
 
 %inline bin_rel_op:
@@ -302,9 +304,6 @@ single_staged_spec:
       { let (p, k) = s in Require (p, k) }
   | ENSURES s = state
       { let (p, k) = s in NormalReturn (p, k) }
-  | v = LOWERCASE_IDENT LPAREN args = separated_list(COMMA, term) RPAREN EQUAL s = state
-      { let (p, k) = s in
-        Pred (v, args, (p, k)) }
   | v = LOWERCASE_IDENT LPAREN args = separated_list(COMMA, term) RPAREN
       { HigherOrder (v, args) }
   | SHIFT LPAREN v = LOWERCASE_IDENT DOT s = single_staged_spec RPAREN
@@ -340,6 +339,11 @@ lemma:
     }
 ;
 
+type_pred_decl:
+    | v = LOWERCASE_IDENT LPAREN args = separated_list(COMMA, term) RPAREN EQUAL s = state
+        { let (p, k) = s in (v, args, (p, k)) }
+;
+
 parse_pi:
   | p = pi EOF
       { p }
@@ -363,3 +367,7 @@ parse_lemma:
 parse_state:
   | t = state EOF
       { t }
+
+parse_type_pred_decl:
+    | t = type_pred_decl EOF
+            { t }

@@ -31,6 +31,9 @@ let parse_term spec = Parser.parse_term Lexer.token (Lexing.from_string spec)
 
 let parse_state spec = Parser.parse_state Lexer.token (Lexing.from_string spec)
 
+let parse_type_pred_decl spec =
+  handle_error Parser.parse_type_pred_decl (Lexing.from_string spec)
+
 let string_of_payload (p : Parsetree.payload) =
   match p with
   | PStr [{

@@ -18,6 +18,7 @@ open Utils.Hstdlib
 let file_mode = ref false
 let test_mode = ref false
 let tests_failed = ref false
+let user_type_predicates : (string, Hipcore.Hiptypes.term list * Hipcore.Hiptypes.state) Hashtbl.t = Hashtbl.create 32
 
 (** List of definitions to insert before passing code to the OCaml frontend.
     Mark declarations that should not be converted into intermediates with [@@ignore]. *)
@@ -492,11 +493,90 @@ let preprocess_spec_comments =
     let output = Str.global_replace lemma_attr_regex "@@@lemma" output in
     output
 
+let parse_top_type_predicates content =
+  let lines = String.split_on_char '\n' content in
+  let prefix = "%%pred " in
+  let prefix_len = String.length prefix in
+  let comment_prefix = "(*@" in
+  let comment_suffix = "@*)" in
+  let comment_prefix_len = String.length comment_prefix in
+  let comment_suffix_len = String.length comment_suffix in
+  let starts_with s pre =
+    String.length s >= String.length pre
+    && String.equal (String.sub s 0 (String.length pre)) pre
+  in
+  let ends_with s suf =
+    let ls = String.length s in
+    let lsf = String.length suf in
+    ls >= lsf
+    && String.equal (String.sub s (ls - lsf) lsf) suf
+  in
+  let predicate_decl_of_line trimmed =
+    if String.length trimmed >= prefix_len
+       && String.equal (String.sub trimmed 0 prefix_len) prefix
+    then
+      Some (String.sub trimmed prefix_len (String.length trimmed - prefix_len))
+    else if starts_with trimmed comment_prefix && ends_with trimmed comment_suffix then
+      let inner =
+        String.sub trimmed comment_prefix_len
+          (String.length trimmed - comment_prefix_len - comment_suffix_len)
+        |> String.trim
+      in
+      let pred_kw = "pred " in
+      let pred_kw_len = String.length pred_kw in
+      if String.length inner >= pred_kw_len
+         && String.equal (String.sub inner 0 pred_kw_len) pred_kw
+      then Some (String.sub inner pred_kw_len (String.length inner - pred_kw_len))
+      else None
+    else None
+  in
+  let rec take_prefix preds kept_rev rest =
+    match rest with
+    | [] -> List.rev preds, List.rev kept_rev, []
+    | line :: tl ->
+        let trimmed = String.trim line in
+        if String.equal trimmed "" then
+          take_prefix preds (line :: kept_rev) tl
+        else begin
+          match predicate_decl_of_line trimmed with
+          | Some decl ->
+              let pred = Ocamlfrontend.Annotation.parse_type_pred_decl decl in
+              take_prefix (pred :: preds) kept_rev tl
+          | None ->
+              List.rev preds, List.rev kept_rev, rest
+        end
+  in
+  let preds, kept_prefix, remaining = take_prefix [] [] lines in
+  let content_wo_preds = String.concat "\n" (kept_prefix @ remaining) in
+  preds, content_wo_preds
+
+let store_top_type_predicates preds =
+  Hashtbl.reset user_type_predicates;
+  List.iter
+    (fun (name, args, state) ->
+      Hashtbl.replace user_type_predicates name (args, state))
+    preds
+
+let print_top_type_predicates preds =
+  if preds <> [] then begin
+    Format.printf "[ Parsed type predicates ]@.";
+    List.iter
+      (fun (name, args, state) ->
+        Format.printf "- %s(%s) = %s@."
+          name
+          (String.concat ", " (List.map Hipcore.Pretty.string_of_term args))
+          (Hipcore.Pretty.string_of_state state))
+      preds
+  end
+
 let run_file input_file =
   let open Utils.Io in
   let chan = open_in input_file in
   let lines = input_lines chan in
   let content = String.concat "\n" lines in
+  let parsed_type_preds, content = parse_top_type_predicates content in
+  let () = store_top_type_predicates parsed_type_preds in
+  let () = print_top_type_predicates parsed_type_preds in
   let content = preprocess_spec_comments content in
   begin match Sys.getenv_opt "PARSE_SPEC_EXAMPLE" with
   | Some spec ->

@@ -123,6 +123,8 @@ and kappa =
 (* a formula which describes a program state *)
 and state = pi * kappa
 
+and type_pred = string * term list * state
+
 (* v->phi and (Eff arg?-> phi)* *)
 and handlingcases = (string * staged_spec) * ((string * string option * staged_spec) list)
 and trycatch = (staged_spec * handlingcases)
@@ -151,7 +153,6 @@ and staged_spec =
   | TryCatch of (pi * kappa * trycatch * term)
   | Multi of staged_spec * staged_spec
   | Assume of staged_spec
-  | Pred of string * term list * (pi * kappa) 
 
 (* and spec = stagedSpec list
 and disj_spec = spec list *)
