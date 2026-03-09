@@ -1,5 +1,6 @@
 (*@ pred p_list(x) = x->#List[int] @*)
 (*@ pred p_ref(x) = x:#Ref[int] /\ emp @*)
+(*@ pred p_int_cell(x) = x->#Ref[int] @*)
 
 type h = |A 
          |B 
@@ -18,10 +19,16 @@ let pred_id x = x
 (*@ req p_list(x); ens res = x /\ p_list(x) @*)
 
 let pred_unfold y = y
-(*@ req p_list(y); ens res = x /\ x->#List[int] @*)
+(*@ req p_list(y); ens res = y /\ y->#List[int] @*)
 
 let pred_fold x = x
 (*@ req x->#List[int]; ens res = x /\ p_list(x) @*)
+
+let pred_mixed_req y = y
+(*@ req p_list(y) /\ y = y; ens res = y /\ y->#List[int] @*)
+
+let pred_mixed_ens y = y
+(*@ req y->#List[int] /\ y = y; ens res = y /\ p_list(y) @*)
 
 let plus x y = x + y 
 (*@  req x:#int /\ y:#int ; ens res : # int @*)
@@ -97,6 +104,9 @@ let swap x  y  =
             
               update x  v2  ;
               update y  v1 
+
+          let swap_mixed x y = swap x y
+          (*@ req p_int_cell(x) /\ y->#Ref[str]; ens x->#Ref[str] /\ p_int_cell(y) @*)
 
 let alise x y = swap x y 
 (*@  req x->#Ref[a'] /\ x=y ; ens x->#Ref[a'] /\ x=y  $ 
