@@ -255,7 +255,8 @@ pi:
   // | pure_formula IMPLICATION pure_formula { Imply ($1, $3) }
   | TILDE p = pi
       { Not p }
-//   | v = LOWERCASE_IDENT args=delimited(LPAREN, separated_nonempty_list(COMMA, pure_formula_term), RPAREN) { Predicate (v, args) }
+    | v = LOWERCASE_IDENT LPAREN args = separated_list(COMMA, term) RPAREN
+            { Predicate (v, args) }
   | p = delimited(LPAREN, pi, RPAREN)
       { p }
   | v = LOWERCASE_IDENT COLON t = term

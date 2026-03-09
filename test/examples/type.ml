@@ -14,6 +14,9 @@ type 'a list = |Nil
 let id2 y =  y
  (*@  req y:#t' ; ens res : # t'  @*)
 
+let pred_id x = x
+(*@ req p_list(x); ens res = x /\ p_list(x) @*)
+
 let plus x y = x + y 
 (*@  req x:#int /\ y:#int ; ens res : # int @*)
 

@@ -555,7 +555,8 @@ let store_top_type_predicates preds =
   List.iter
     (fun (name, args, state) ->
       Hashtbl.replace user_type_predicates name (args, state))
-    preds
+    preds;
+  Ocamlfrontend.Annotation.set_type_predicates preds
 
 let print_top_type_predicates preds =
   if preds <> [] then begin
